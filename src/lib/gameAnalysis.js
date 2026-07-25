@@ -110,6 +110,7 @@ export async function analyzeGameFromMoves(engine, sanMoves, { startFen, depth =
       cpLoss,
       classification: classifyMove(cpLoss),
       bestMoveSan: bestMoveSan && bestMoveSan !== moveResult.san ? bestMoveSan : null,
+      punishingLine: buildContinuation(fenAfter, after.pvUci, 6),
     });
 
     current = after;

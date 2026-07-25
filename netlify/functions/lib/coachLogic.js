@@ -35,15 +35,25 @@ export async function callChatApi(prompt, maxTokens = 700) {
   return extractJson(text);
 }
 
-export function buildMistakePrompt({ fenBefore, badMoveSan, bestMoveSan, evalBeforeStr, evalAfterStr, moveNumber, continuationSans }) {
+export function buildMistakePrompt({
+  fenBefore,
+  badMoveSan,
+  bestMoveSan,
+  evalBeforeStr,
+  evalAfterStr,
+  moveNumber,
+  continuationSans,
+  moverColor,
+}) {
   const continuationText = continuationSans?.length
     ? `רצף ההמשך שהמנוע רואה כענישה הצפויה של היריב (מהלך אחר מהלך, החל מתגובת היריב למהלך השגוי): ${continuationSans.join(', ')}.`
     : 'אין נתוני המשך זמינים.';
+  const colorLabel = moverColor === 'b' ? 'שחור' : 'לבן';
 
   return `אתה מאמן שחמט מומחה ומעודד, שמסביר טעויות בעברית פשוטה וברורה לשחקן מתחיל-בינוני.
 
 נתוני העמדה:
-- מספר מהלך: ${moveNumber} (לבן)
+- מספר מהלך: ${moveNumber} (${colorLabel})
 - מצב הלוח לפני המהלך (FEN): ${fenBefore}
 - המהלך שהשחקן שיחק (וטעה בו): ${badMoveSan}
 - המהלך הנכון/המומלץ במקום זאת: ${bestMoveSan}

@@ -105,6 +105,7 @@ export function useChessGame(initialMode = 'coached') {
       evalAfterStr: formatCp(mistakeData.evalAfterCp),
       moveNumber: mistakeData.moveNumber,
       continuationSans: mistakeData.punishingLine?.sans ?? [],
+      moverColor: 'w',
     });
     setMistake((prev) => (prev ? { ...prev, explanation, loadingExplanation: false } : prev));
   }, []);
