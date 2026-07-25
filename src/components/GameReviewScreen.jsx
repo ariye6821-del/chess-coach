@@ -89,6 +89,7 @@ export function GameReviewScreen({ records, summary, studentColor = 'w', onClose
               position: boardFen,
               allowDragging: false,
               boardOrientation: 'white',
+              showAnimations: false,
               darkSquareStyle: { backgroundColor: '#4f6f8f' },
               lightSquareStyle: { backgroundColor: '#dce6ec' },
             }}
