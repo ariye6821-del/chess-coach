@@ -72,7 +72,7 @@ export function GameReviewScreen({ records, summary, studentColor = 'w', onClose
         <h2 className="text-2xl font-bold text-slate-100">{title || 'סקירת משחק'}</h2>
         <button
           onClick={onClose}
-          className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800"
+          className="min-h-11 rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800"
         >
           חזרה
         </button>
@@ -94,32 +94,32 @@ export function GameReviewScreen({ records, summary, studentColor = 'w', onClose
             }}
           />
 
-          <div className="mt-3 flex items-center justify-center gap-2">
+          <div className="mt-3 grid grid-cols-4 gap-2">
             <button
               onClick={() => setSelectedIndex(-1)}
               disabled={selectedIndex === -1}
-              className="rounded-md bg-slate-700 px-2 py-1 text-xs text-slate-200 disabled:opacity-30"
+              className="min-h-11 rounded-md bg-slate-700 px-2 py-2 text-xs text-slate-200 disabled:opacity-30 sm:text-sm"
             >
               ⏮ להתחלה
             </button>
             <button
               onClick={() => setSelectedIndex((i) => Math.max(-1, i - 1))}
               disabled={selectedIndex <= -1}
-              className="rounded-md bg-slate-700 px-3 py-1 text-xs text-slate-200 disabled:opacity-30"
+              className="min-h-11 rounded-md bg-slate-700 px-2 py-2 text-xs text-slate-200 disabled:opacity-30 sm:text-sm"
             >
               ◀ הקודם
             </button>
             <button
               onClick={() => setSelectedIndex((i) => Math.min(records.length - 1, i + 1))}
               disabled={selectedIndex >= records.length - 1}
-              className="rounded-md bg-sky-600 px-3 py-1 text-xs font-bold text-white disabled:opacity-30"
+              className="min-h-11 rounded-md bg-sky-600 px-2 py-2 text-xs font-bold text-white disabled:opacity-30 sm:text-sm"
             >
               הבא ▶
             </button>
             <button
               onClick={() => setSelectedIndex(records.length - 1)}
               disabled={selectedIndex === records.length - 1 || records.length === 0}
-              className="rounded-md bg-slate-700 px-2 py-1 text-xs text-slate-200 disabled:opacity-30"
+              className="min-h-11 rounded-md bg-slate-700 px-2 py-2 text-xs text-slate-200 disabled:opacity-30 sm:text-sm"
             >
               לסוף ⏭
             </button>
@@ -172,7 +172,7 @@ export function GameReviewScreen({ records, summary, studentColor = 'w', onClose
                     <button
                       key={subIdx}
                       onClick={() => setSelectedIndex(rec.index)}
-                      className={`rounded px-2 py-0.5 font-mono transition ${
+                      className={`min-h-9 rounded px-2 py-1.5 font-mono transition ${
                         rec.index === selectedIndex ? 'bg-sky-600 text-white' : 'hover:bg-slate-800'
                       } ${isStudent ? '' : 'opacity-70'}`}
                     >

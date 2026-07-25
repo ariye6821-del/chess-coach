@@ -3,6 +3,7 @@ import { dirname } from 'node:path'
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { VitePWA } from 'vite-plugin-pwa'
 
 const projectRoot = dirname(fileURLToPath(import.meta.url))
 
@@ -59,6 +60,40 @@ export default defineConfig(({ mode }) => {
   process.env.LLM_MODEL = process.env.LLM_MODEL || env.LLM_MODEL || '';
 
   return {
-    plugins: [react(), tailwindcss(), netlifyFunctionsDevPlugin()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      netlifyFunctionsDevPlugin(),
+      VitePWA({
+        registerType: 'autoUpdate',
+        injectRegister: 'auto',
+        includeAssets: ['favicon.svg'],
+        manifest: {
+          id: '/',
+          name: 'מאמן השחמט שלי',
+          short_name: 'מאמן שחמט',
+          description: 'שפרו את דירוג האלו שלכם באמצעות ניתוח טעויות בזמן אמת עם מאמן שחמט מבוסס AI ומנוע Stockfish מקומי.',
+          lang: 'he',
+          dir: 'rtl',
+          start_url: '/',
+          scope: '/',
+          display: 'standalone',
+          orientation: 'portrait-primary',
+          theme_color: '#0f172a',
+          background_color: '#0f172a',
+          icons: [
+            { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+            { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+            { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          ],
+        },
+        workbox: {
+          // The Stockfish engine files are large and rarely change - cache them
+          // so the app can re-launch and analyze offline once installed.
+          globPatterns: ['**/*.{js,css,html,svg,png,ico,wasm}'],
+          maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
+        },
+      }),
+    ],
   };
 })

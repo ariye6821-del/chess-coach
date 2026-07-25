@@ -67,26 +67,32 @@ export function PunishingLinePreview({ punishingLine, onPreviewFen }) {
           </span>
         ))}
       </div>
-      <div className="flex items-center justify-center gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <button
           onClick={() => setStep((s) => Math.max(-1, s - 1))}
           disabled={step <= -1}
-          className="rounded-md bg-slate-700 px-2 py-1 text-xs text-slate-200 disabled:opacity-30"
+          className="min-h-11 rounded-md bg-slate-700 px-2 py-2 text-xs text-slate-200 disabled:opacity-30 sm:text-sm"
         >
           ⏮ הקודם
         </button>
-        <button onClick={() => setPlaying((p) => !p)} className="rounded-md bg-sky-600 px-3 py-1 text-xs font-bold text-white">
+        <button
+          onClick={() => setPlaying((p) => !p)}
+          className="min-h-11 rounded-md bg-sky-600 px-2 py-2 text-xs font-bold text-white sm:text-sm"
+        >
           {playing ? '⏸ עצור' : '▶ הפעל'}
         </button>
         <button
           onClick={() => setStep((s) => Math.min(total - 1, s + 1))}
           disabled={step >= total - 1}
-          className="rounded-md bg-slate-700 px-2 py-1 text-xs text-slate-200 disabled:opacity-30"
+          className="min-h-11 rounded-md bg-slate-700 px-2 py-2 text-xs text-slate-200 disabled:opacity-30 sm:text-sm"
         >
           הבא ⏭
         </button>
       </div>
-      <button onClick={close} className="w-full rounded-md border border-slate-600 px-2 py-1 text-xs text-slate-400 hover:bg-slate-800">
+      <button
+        onClick={close}
+        className="min-h-11 w-full rounded-md border border-slate-600 px-2 py-2 text-xs text-slate-400 hover:bg-slate-800 sm:text-sm"
+      >
         סגור תצוגה
       </button>
     </div>

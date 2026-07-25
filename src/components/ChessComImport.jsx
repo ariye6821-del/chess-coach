@@ -131,13 +131,13 @@ export function ChessComImport() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="שם משתמש ב-Chess.com"
-            className="flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100"
+            className="min-h-11 flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100"
             onKeyDown={(e) => e.key === 'Enter' && loadGames()}
           />
           <button
             onClick={loadGames}
             disabled={loadingGames || !engineReady}
-            className="rounded-md bg-sky-600 px-4 py-2 font-bold text-white disabled:opacity-50"
+            className="min-h-11 rounded-md bg-sky-600 px-4 py-2 font-bold text-white disabled:opacity-50"
           >
             {loadingGames ? 'טוען...' : 'טען משחקים'}
           </button>
@@ -153,7 +153,7 @@ export function ChessComImport() {
             <button
               onClick={analyzeProfile}
               disabled={!!profileProgress}
-              className="rounded-md bg-purple-600 px-3 py-1.5 text-sm font-bold text-white disabled:opacity-50"
+              className="min-h-11 rounded-md bg-purple-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-50"
             >
               נתח {Math.min(games.length, BULK_GAME_LIMIT)} משחקים ומצא נקודות תורפה
             </button>
@@ -175,7 +175,7 @@ export function ChessComImport() {
                 <button
                   onClick={() => analyzeGame(g)}
                   disabled={analyzingUrl === g.url}
-                  className="rounded-md bg-emerald-700 px-3 py-1 text-xs font-bold text-white disabled:opacity-50"
+                  className="min-h-9 rounded-md bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
                 >
                   {analyzingUrl === g.url ? 'מנתח...' : 'נתח משחק זה'}
                 </button>

@@ -111,7 +111,7 @@ function PlayScreen({ mode }) {
   const displayFen = previewFen ?? fen;
 
   return (
-    <div className="flex flex-col gap-6 lg:flex-row-reverse lg:items-start">
+    <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row-reverse lg:items-start">
       <div className="flex flex-col items-center gap-3 lg:flex-1">
         <div className="flex w-full max-w-[560px] items-center justify-center gap-3">
           {mode === 'coached' && <EvalBar evalCp={currentEvalCp} />}
@@ -175,7 +175,7 @@ function PlayScreen({ mode }) {
           />
         )}
 
-        <div className="mt-4">
+        <div className="mt-4 hidden sm:block">
           <GoogleAd slot={ADSENSE_SLOT_SIDEBAR} className="min-h-[250px]" />
         </div>
       </div>
@@ -187,15 +187,17 @@ function App() {
   const [mode, setMode] = useState('coached');
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 to-slate-900 px-4 py-6" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-b from-slate-950 to-slate-900 px-3 py-4 sm:px-4 sm:py-6" dir="rtl">
       <div className="mx-auto max-w-6xl">
-        <header className="mb-6 text-center">
-          <h1 className="text-3xl font-extrabold text-slate-100 sm:text-4xl">מאמן השחמט שלי</h1>
-          <p className="mt-1 text-slate-400">שפרו את דירוג האלו שלכם באמצעות ניתוח טעויות בזמן אמת</p>
+        <header className="mb-4 text-center sm:mb-6">
+          <h1 className="text-2xl font-extrabold text-slate-100 sm:text-3xl lg:text-4xl">מאמן השחמט שלי</h1>
+          <p className="mt-1 text-sm text-slate-400 sm:text-base">
+            שפרו את דירוג האלו שלכם באמצעות ניתוח טעויות בזמן אמת
+          </p>
         </header>
 
         <div className="mb-4">
-          <GoogleAd slot={ADSENSE_SLOT_BANNER} className="min-h-[90px]" />
+          <GoogleAd slot={ADSENSE_SLOT_BANNER} className="min-h-[50px] sm:min-h-[90px]" />
         </div>
 
         <ModeTabs active={mode} onChange={setMode} />

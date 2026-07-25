@@ -11,7 +11,7 @@ export function WeaknessProfile({ profile, onClose }) {
         <h2 className="text-2xl font-bold text-slate-100">פרופיל חולשות</h2>
         <button
           onClick={onClose}
-          className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800"
+          className="min-h-11 rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800"
         >
           חזרה
         </button>

@@ -13,10 +13,19 @@ body {
   font-family: 'Heebo', system-ui, 'Segoe UI', Roboto, sans-serif;
   background-color: #0f172a;
   color: #e2e8f0;
+  overflow-x: hidden;
+  /* Avoid the double-tap-to-zoom delay/gesture so buttons and drag feel native on mobile. */
+  touch-action: manipulation;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 * {
   box-sizing: border-box;
+}
+
+img,
+svg {
+  max-width: 100%;
 }
 
 ::-webkit-scrollbar {
