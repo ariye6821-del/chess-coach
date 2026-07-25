@@ -8,7 +8,11 @@ import { DifficultySelector } from './components/DifficultySelector';
 import { ModeTabs } from './components/ModeTabs';
 import { GameReviewScreen } from './components/GameReviewScreen';
 import { ChessComImport } from './components/ChessComImport';
+import { GoogleAd } from './components/GoogleAd';
 import { formatEval } from './lib/stockfishEngine';
+
+const ADSENSE_SLOT_BANNER = import.meta.env.VITE_ADSENSE_SLOT_BANNER;
+const ADSENSE_SLOT_SIDEBAR = import.meta.env.VITE_ADSENSE_SLOT_SIDEBAR;
 
 function StatusBadge({ status }) {
   const map = {
@@ -170,6 +174,10 @@ function PlayScreen({ mode }) {
             onNewGame={() => resetGame(mode)}
           />
         )}
+
+        <div className="mt-4">
+          <GoogleAd slot={ADSENSE_SLOT_SIDEBAR} className="min-h-[250px]" />
+        </div>
       </div>
     </div>
   );
@@ -185,6 +193,10 @@ function App() {
           <h1 className="text-3xl font-extrabold text-slate-100 sm:text-4xl">מאמן השחמט שלי</h1>
           <p className="mt-1 text-slate-400">שפרו את דירוג האלו שלכם באמצעות ניתוח טעויות בזמן אמת</p>
         </header>
+
+        <div className="mb-4">
+          <GoogleAd slot={ADSENSE_SLOT_BANNER} className="min-h-[90px]" />
+        </div>
 
         <ModeTabs active={mode} onChange={setMode} />
 
