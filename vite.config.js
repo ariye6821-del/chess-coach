@@ -70,8 +70,8 @@ export default defineConfig(({ mode }) => {
         includeAssets: ['favicon.svg'],
         manifest: {
           id: '/',
-          name: 'מאמן השחמט שלי',
-          short_name: 'מאמן שחמט',
+          name: 'Chess Coach',
+          short_name: 'Chess Coach',
           description: 'שפרו את דירוג האלו שלכם באמצעות ניתוח טעויות בזמן אמת עם מאמן שחמט מבוסס AI ומנוע Stockfish מקומי.',
           lang: 'he',
           dir: 'rtl',
