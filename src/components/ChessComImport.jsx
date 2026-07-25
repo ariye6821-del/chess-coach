@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { StockfishEngine } from '../lib/stockfishEngine';
 import { fetchRecentGames, pgnToSanMoves, describeGame } from '../lib/chesscom';
-import { analyzeGameFromMoves, summarizeGame } from '../lib/gameAnalysis';
+import { analyzeGameFromMoves, summarizeGame, movePhase } from '../lib/gameAnalysis';
 import { getWeaknessSummary } from '../lib/coachApi';
+import { addPuzzlesFromRecords } from '../lib/puzzleBank';
 import { GameReviewScreen } from './GameReviewScreen';
 import { WeaknessProfile } from './WeaknessProfile';
 
@@ -65,6 +66,7 @@ export function ChessComImport() {
       const sanMoves = pgnToSanMoves(game.pgn);
       const records = await analyzeGameFromMoves(engineRef.current, sanMoves, { depth: SINGLE_GAME_DEPTH });
       const summary = summarizeGame(records, { color: game.studentColor });
+      addPuzzlesFromRecords(records, game.studentColor, 'chesscom');
       setSingleReview({
         records,
         summary,
@@ -83,6 +85,7 @@ export function ChessComImport() {
     setError(null);
     setProfileProgress({ done: 0, total: subset.length });
     const aggregate = emptyAggregate();
+    const sampleMistakes = [];
 
     for (let i = 0; i < subset.length; i++) {
       const game = subset[i];
@@ -97,6 +100,20 @@ export function ChessComImport() {
         }
         aggregate.totalMoves += summary.totalMoves;
         aggregate.totalCpLoss += summary.avgCpLoss * summary.totalMoves;
+        addPuzzlesFromRecords(records, game.studentColor, 'chesscom');
+
+        for (const rec of records) {
+          if (rec.mover !== game.studentColor) continue;
+          if (rec.classification.key !== 'mistake' && rec.classification.key !== 'blunder') continue;
+          sampleMistakes.push({
+            san: rec.san,
+            classification: rec.classification.key,
+            moveNumber: rec.moveNumber,
+            phase: { opening: 'פתיחה', middlegame: 'אמצע משחק', endgame: 'סיום' }[movePhase(rec.moveNumber)],
+            cpLoss: rec.cpLoss,
+            bestMoveSan: rec.bestMoveSan,
+          });
+        }
       } catch {
         // skip a game that fails to parse or analyze and continue with the rest
       }
@@ -104,11 +121,13 @@ export function ChessComImport() {
     }
 
     const avgCpLoss = aggregate.totalMoves ? aggregate.totalCpLoss / aggregate.totalMoves : 0;
+    const topMistakes = sampleMistakes.sort((a, b) => b.cpLoss - a.cpLoss).slice(0, 25);
     const llmSummary = await getWeaknessSummary({
       gamesAnalyzed: subset.length,
       counts: aggregate.counts,
       avgCpLoss,
       byPhase: aggregate.byPhase,
+      sampleMistakes: topMistakes,
     });
     setProfile({ counts: aggregate.counts, byPhase: aggregate.byPhase, avgCpLoss, gamesAnalyzed: subset.length, llmSummary });
     setProfileProgress(null);

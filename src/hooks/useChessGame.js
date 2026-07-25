@@ -3,7 +3,15 @@ import { Chess } from 'chess.js';
 import { StockfishEngine } from '../lib/stockfishEngine';
 import { getCoachExplanation } from '../lib/coachApi';
 import { isWeakTier, pickWeightedMove } from '../lib/difficulty';
-import { buildContinuation, sanForUci, uciToMoveInput, analyzeGameFromMoves, summarizeGame } from '../lib/gameAnalysis';
+import {
+  buildContinuation,
+  sanForUci,
+  uciToMoveInput,
+  analyzeGameFromMoves,
+  summarizeGame,
+  classifyMove,
+} from '../lib/gameAnalysis';
+import { addPuzzle, addPuzzlesFromRecords } from '../lib/puzzleBank';
 
 const MISTAKE_THRESHOLD_CP = 150; // 1.5 pawns
 const PLAYER_ANALYSIS_DEPTH = 14;
@@ -106,6 +114,7 @@ export function useChessGame(initialMode = 'coached') {
       moveNumber: mistakeData.moveNumber,
       continuationSans: mistakeData.punishingLine?.sans ?? [],
       moverColor: 'w',
+      classification: mistakeData.classification,
     });
     setMistake((prev) => (prev ? { ...prev, explanation, loadingExplanation: false } : prev));
   }, []);
@@ -163,12 +172,23 @@ export function useChessGame(initialMode = 'coached') {
             evalAfterCp,
             moveNumber,
             punishingLine,
+            classification: classifyMove(delta).key,
             explanation: null,
             loadingExplanation: true,
           };
           setMistake(mistakeData);
           setStatus('mistake');
           requestExplanation(mistakeData);
+          addPuzzle({
+            fen: fenBeforeMove,
+            solutionSan: bestMoveSan,
+            badMoveSan,
+            classification: mistakeData.classification,
+            cpLoss: delta,
+            evalBeforeWhite: evalBeforeCp,
+            evalAfterWhite: evalAfterCp,
+            source: 'coached',
+          });
           return;
         }
 
@@ -277,6 +297,7 @@ export function useChessGame(initialMode = 'coached') {
       onProgress: (done, total) => setReviewProgress({ done, total }),
     });
     const summary = summarizeGame(records, { color: 'w' });
+    addPuzzlesFromRecords(records, 'w', 'free-play');
     setReviewData({ records, summary });
     setReviewProgress(null);
     setStatus(chessRef.current.isGameOver() ? 'game-over' : 'player-turn');

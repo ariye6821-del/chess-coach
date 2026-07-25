@@ -8,6 +8,7 @@ import { DifficultySelector } from './components/DifficultySelector';
 import { ModeTabs } from './components/ModeTabs';
 import { GameReviewScreen } from './components/GameReviewScreen';
 import { ChessComImport } from './components/ChessComImport';
+import { PuzzleTrainer } from './components/PuzzleTrainer';
 import { GoogleAd } from './components/GoogleAd';
 import { formatEval } from './lib/stockfishEngine';
 
@@ -209,7 +210,13 @@ function App() {
 
         <ModeTabs active={mode} onChange={setMode} />
 
-        {mode === 'import' ? <ChessComImport /> : <PlayScreen key={mode} mode={mode} />}
+        {mode === 'import' ? (
+          <ChessComImport />
+        ) : mode === 'puzzles' ? (
+          <PuzzleTrainer key="puzzles" />
+        ) : (
+          <PlayScreen key={mode} mode={mode} />
+        )}
       </div>
     </div>
   );

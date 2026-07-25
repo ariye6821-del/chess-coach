@@ -22,9 +22,17 @@ function SummaryChips({ summary }) {
   );
 }
 
-function isStudentMistake(record, studentColor) {
-  return !!record && record.mover === studentColor && (record.classification.key === 'mistake' || record.classification.key === 'blunder');
+function isStudentMove(record, studentColor) {
+  return !!record && record.mover === studentColor;
 }
+
+const HEADER_TEXT_BY_CLASS = {
+  best: '⭐ מהלך מיטבי',
+  good: '✅ מהלך טוב',
+  inaccuracy: '🤔 אפשר היה יותר מדויק',
+  mistake: '⚠️ כאן הייתה טעות',
+  blunder: '🚨 כאן הייתה טעות חמורה',
+};
 
 export function GameReviewScreen({ records, summary, studentColor = 'w', onClose, title }) {
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -39,7 +47,7 @@ export function GameReviewScreen({ records, summary, studentColor = 'w', onClose
   }, [selectedIndex]);
 
   useEffect(() => {
-    if (!isStudentMistake(selected, studentColor)) return;
+    if (!isStudentMove(selected, studentColor)) return;
     if (explanations[selectedIndex]) return;
 
     setExplanations((prev) => ({ ...prev, [selectedIndex]: { loadingExplanation: true, explanation: null } }));
@@ -52,6 +60,7 @@ export function GameReviewScreen({ records, summary, studentColor = 'w', onClose
       moveNumber: selected.moveNumber,
       continuationSans: selected.punishingLine?.sans ?? [],
       moverColor: selected.mover,
+      classification: selected.classification.key,
     }).then((explanation) => {
       setExplanations((prev) => ({ ...prev, [selectedIndex]: { loadingExplanation: false, explanation } }));
     });
@@ -145,10 +154,11 @@ export function GameReviewScreen({ records, summary, studentColor = 'w', onClose
             <p className="mt-3 text-center text-sm text-slate-500">עמדת פתיחה - לחצו "הבא" כדי לעבור מהלך-מהלך</p>
           )}
 
-          {isStudentMistake(selected, studentColor) && (
+          {isStudentMove(selected, studentColor) && (
             <div className="mt-3">
               <CoachExplanationBox
-                headerText="⚠️ כאן הייתה טעות"
+                headerText={HEADER_TEXT_BY_CLASS[selected.classification.key]}
+                classification={selected.classification.key}
                 badMoveSan={selected.san}
                 bestMoveSan={selected.bestMoveSan}
                 punishingLine={selected.punishingLine}

@@ -52,7 +52,7 @@ export function PunishingLinePreview({ punishingLine, onPreviewFen }) {
         onClick={() => setOpen(true)}
         className="w-full rounded-lg border border-sky-700 bg-sky-950/40 px-3 py-2 text-sm font-bold text-sky-300 transition hover:bg-sky-900/50"
       >
-        🎬 הראה לי מה היה קורה על הלוח
+🎬 הראה לי את ההמשך הצפוי על הלוח
       </button>
     );
   }

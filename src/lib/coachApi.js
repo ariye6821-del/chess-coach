@@ -12,10 +12,31 @@ async function callFunction(name, payload) {
   return response.json();
 }
 
-function localMistakeFallback({ badMoveSan, bestMoveSan, evalBeforeStr, evalAfterStr, continuationSans }) {
+function localMoveFallback({ badMoveSan, bestMoveSan, evalBeforeStr, evalAfterStr, continuationSans, classification }) {
+  const isGood = classification === 'best' || classification === 'good';
+  const isMinor = classification === 'inaccuracy';
   const continuationText = continuationSans?.length
     ? ` המנוע צופה שהיריב ימשיך עם: ${continuationSans.join(', ')} - המשך שממחיש כמה העמדה שלך נעשתה קשה יותר.`
     : '';
+
+  if (isGood) {
+    return {
+      mistake: `המהלך ${badMoveSan} היה ${classification === 'best' ? 'מהלך מיטבי' : 'מהלך טוב'} — ההערכה נשארה יציבה או השתפרה (${evalBeforeStr} ← ${evalAfterStr}).`,
+      strategy: 'המהלך שומר על עקרונות טובים - כמו התפתחות כלים, בטיחות המלך ושליטה במרכז הלוח.',
+      howToThink: 'המשך לחפש מהלכים שמפתחים כלים, שולטים במרכז ושומרים על בטיחות המלך, בדיוק כמו במהלך הזה.',
+      isFallback: true,
+    };
+  }
+  if (isMinor) {
+    return {
+      mistake: `המהלך ${badMoveSan} לא היה מדויק לחלוטין — ההערכה ירדה במעט (${evalBeforeStr} ← ${evalAfterStr}).${
+        bestMoveSan ? ` המהלך ${bestMoveSan} היה מדויק יותר.` : ''
+      }`,
+      strategy: 'לעיתים יש מהלך מעט טוב יותר שמנצל את העמדה בצורה חדה או בטוחה יותר.',
+      howToThink: 'לפני שתחליט, בדוק גם מהלכים חדים או מדויקים יותר, לא רק את הראשון שעולה לך בראש.',
+      isFallback: true,
+    };
+  }
   return {
     mistake: `המהלך ${badMoveSan} הרע את העמדה שלך באופן משמעותי — ההערכה ירדה מ-${evalBeforeStr} ל-${evalAfterStr}. המהלך המומלץ במקום היה ${bestMoveSan}.${continuationText}`,
     strategy:
@@ -52,7 +73,7 @@ export async function getCoachExplanation(params) {
     return await callFunction('analyzeMove', params);
   } catch (err) {
     console.error('analyzeMove request failed, using local fallback:', err);
-    return localMistakeFallback(params);
+    return localMoveFallback(params);
   }
 }
 

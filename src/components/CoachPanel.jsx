@@ -32,6 +32,7 @@ export function CoachPanel({ status, mistake, gameOverMessage, onRetry, onNewGam
         {status === 'mistake' && mistake && (
           <div className="space-y-3">
             <CoachExplanationBox
+              classification={mistake.classification}
               badMoveSan={mistake.badMoveSan}
               bestMoveSan={mistake.bestMoveSan}
               punishingLine={mistake.punishingLine}

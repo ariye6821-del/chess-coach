@@ -1,7 +1,7 @@
 export const NATIVE_ELO_FLOOR = 1320;
 
 export const ELO_PRESETS = [
-  { elo: 800, label: '800 (מתחיל)' },
+  { elo: 400, label: '400 (מתחיל)' },
   { elo: 1000, label: '1000' },
   { elo: 1200, label: '1200' },
   { elo: 1400, label: '1400' },
@@ -24,7 +24,7 @@ export function isWeakTier(elo) {
 export function pickWeightedMove(candidates, elo) {
   if (!candidates.length) return null;
   const n = candidates.length;
-  const temperature = elo <= 800 ? 1.0 : elo <= 1000 ? 0.7 : 0.4;
+  const temperature = elo <= 400 ? 1.0 : elo <= 700 ? 0.85 : elo <= 1000 ? 0.6 : 0.4;
   const weights = candidates.map((_, i) => Math.exp(-i / (n * (1 - temperature + 0.15))));
   const total = weights.reduce((a, b) => a + b, 0);
   let r = Math.random() * total;
