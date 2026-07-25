@@ -194,6 +194,13 @@ function App() {
           <p className="mt-1 text-sm text-slate-400 sm:text-base">
             שפרו את דירוג האלו שלכם באמצעות ניתוח טעויות בזמן אמת
           </p>
+          <a
+            href="/downloads/chess-coach.apk"
+            download
+            className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-500"
+          >
+            📱 הורידו את האפליקציה לאנדרואיד (APK)
+          </a>
         </header>
 
         <div className="mb-4">

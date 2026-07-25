@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.sendikakademi.chesscoach",
+      "sha256_cert_fingerprints": [
+        "AB:E4:E7:BF:5A:44:6A:CB:A5:AB:48:5A:FA:41:8F:46:9F:03:1F:87:4E:26:E0:74:2F:27:D0:A0:5B:59:08:27"
+      ]
+    }
+  }
+]
