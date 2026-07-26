@@ -25,6 +25,20 @@ function formatCp(cp) {
   return cp >= 0 ? `+${pawns}` : pawns;
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * A minimum "thinking" pause before the computer's move lands on the board -
+ * without this, low-depth/weak-tier replies can resolve near-instantly, which
+ * feels robotic rather than like an actual opponent considering the position.
+ */
+function minThinkTimeMs(elo) {
+  const base = elo == null || elo >= 1600 ? 900 : elo >= 1000 ? 700 : 500;
+  return base + Math.random() * 500;
+}
+
 function gameOverReason(chess) {
   if (chess.isCheckmate()) return chess.turn() === 'w' ? 'שחור ניצח בשח-מט' : 'לבן ניצח בשח-מט';
   if (chess.isStalemate()) return 'תיקו - פט';
@@ -138,6 +152,7 @@ export function useChessGame(initialMode = 'coached') {
     async (bestMoveUciForBlack) => {
       const chess = chessRef.current;
       const elo = difficultyRef.current;
+      const thinkStart = Date.now();
 
       let blackMoveUci = bestMoveUciForBlack;
       if (isWeakTier(elo) || !blackMoveUci) {
@@ -149,6 +164,10 @@ export function useChessGame(initialMode = 'coached') {
         if (!finishIfGameOver()) setStatus('player-turn');
         return;
       }
+
+      const elapsed = Date.now() - thinkStart;
+      const minThink = minThinkTimeMs(elo);
+      if (elapsed < minThink) await sleep(minThink - elapsed);
 
       chess.move(uciToMoveInput(blackMoveUci));
       syncFromChess();
