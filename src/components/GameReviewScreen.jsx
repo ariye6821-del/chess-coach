@@ -4,6 +4,7 @@ import { formatEval } from '../lib/stockfishEngine';
 import { MOVE_CLASSES } from '../lib/gameAnalysis';
 import { getCoachExplanation } from '../lib/coachApi';
 import { CoachExplanationBox } from './CoachExplanationBox';
+import { useBoardTheme } from '../hooks/useBoardTheme';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -43,6 +44,7 @@ const HEADER_TEXT_BY_CLASS = {
 };
 
 export function GameReviewScreen({ records, summary, studentColor = 'w', onClose, title, playerElo = null }) {
+  const [theme] = useBoardTheme();
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [previewFen, setPreviewFen] = useState(null);
   const [explanations, setExplanations] = useState({});
@@ -124,8 +126,8 @@ export function GameReviewScreen({ records, summary, studentColor = 'w', onClose
               allowDragging: false,
               boardOrientation,
               showAnimations: false,
-              darkSquareStyle: { backgroundColor: '#4f6f8f' },
-              lightSquareStyle: { backgroundColor: '#dce6ec' },
+              darkSquareStyle: { backgroundColor: theme.dark },
+              lightSquareStyle: { backgroundColor: theme.light },
             }}
           />
 

@@ -7,6 +7,7 @@ import { CoachExplanationBox } from './CoachExplanationBox';
 import { formatEval } from '../lib/stockfishEngine';
 import { ELO_PRESETS } from '../lib/difficulty';
 import { useClickToMove } from '../hooks/useClickToMove';
+import { useBoardTheme } from '../hooks/useBoardTheme';
 
 const SOURCE_LABELS = { coached: 'מהמשחק עם המאמן', 'free-play': 'ממשחק חופשי', chesscom: 'מ-Chess.com' };
 
@@ -21,6 +22,7 @@ function tierLabel(difficultyElo) {
 }
 
 export function PuzzleTrainer() {
+  const [theme] = useBoardTheme();
   const [tierFilter, setTierFilter] = useState('all');
   const [queue, setQueue] = useState(() => getUnsolvedPuzzles());
   const [index, setIndex] = useState(0);
@@ -200,8 +202,8 @@ export function PuzzleTrainer() {
                 boardOrientation,
                 allowDragging: !boardDisabled,
                 showAnimations: false,
-                darkSquareStyle: { backgroundColor: '#4f6f8f' },
-                lightSquareStyle: { backgroundColor: '#dce6ec' },
+                darkSquareStyle: { backgroundColor: theme.dark },
+                lightSquareStyle: { backgroundColor: theme.light },
               }}
             />
           </div>

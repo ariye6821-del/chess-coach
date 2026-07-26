@@ -137,6 +137,9 @@ export function ChessComImport() {
             phase: { opening: 'פתיחה', middlegame: 'אמצע משחק', endgame: 'סיום' }[movePhase(rec.moveNumber)],
             cpLoss: rec.cpLoss,
             bestMoveSan: rec.bestMoveSan,
+            fenBefore: rec.fenBefore,
+            mover: rec.mover,
+            gameTitle: `${game.white.username} נגד ${game.black.username}`,
           });
         }
       } catch {
@@ -154,7 +157,14 @@ export function ChessComImport() {
       byPhase: aggregate.byPhase,
       sampleMistakes: topMistakes,
     });
-    setProfile({ counts: aggregate.counts, byPhase: aggregate.byPhase, avgCpLoss, gamesAnalyzed: subset.length, llmSummary });
+    setProfile({
+      counts: aggregate.counts,
+      byPhase: aggregate.byPhase,
+      avgCpLoss,
+      gamesAnalyzed: subset.length,
+      llmSummary,
+      topMistakes,
+    });
     setProfileProgress(null);
   };
 

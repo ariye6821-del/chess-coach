@@ -11,6 +11,8 @@ import { GameReviewScreen } from './components/GameReviewScreen';
 import { ChessComImport } from './components/ChessComImport';
 import { PuzzleTrainer } from './components/PuzzleTrainer';
 import { GoogleAd } from './components/GoogleAd';
+import { BoardThemeSelector } from './components/BoardThemeSelector';
+import { useBoardTheme } from './hooks/useBoardTheme';
 import { formatEval } from './lib/stockfishEngine';
 
 const ADSENSE_SLOT_BANNER = import.meta.env.VITE_ADSENSE_SLOT_BANNER;
@@ -96,6 +98,7 @@ function PlayScreen({ mode }) {
     getChess,
   } = useChessGame(mode);
 
+  const [theme] = useBoardTheme();
   const [previewFen, setPreviewFen] = useState(null);
   const boardDisabled = status !== 'player-turn' || previewFen !== null;
   const boardSectionRef = useRef(null);
@@ -147,8 +150,8 @@ function PlayScreen({ mode }) {
                 boardOrientation: 'white',
                 allowDragging: !boardDisabled,
                 canDragPiece: ({ piece }) => !boardDisabled && piece.pieceType.startsWith('w'),
-                darkSquareStyle: { backgroundColor: '#4f6f8f' },
-                lightSquareStyle: { backgroundColor: '#dce6ec' },
+                darkSquareStyle: { backgroundColor: theme.dark },
+                lightSquareStyle: { backgroundColor: theme.light },
               }}
             />
             {boardDisabled && status !== 'mistake' && status !== 'game-over' && !previewFen && (
@@ -229,6 +232,10 @@ function App() {
 
         <div className="mb-4">
           <GoogleAd slot={ADSENSE_SLOT_BANNER} className="min-h-[50px] sm:min-h-[90px]" />
+        </div>
+
+        <div className="mb-3 flex justify-end">
+          <BoardThemeSelector />
         </div>
 
         <ModeTabs active={mode} onChange={setMode} />
