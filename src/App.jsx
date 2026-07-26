@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { useChessGame } from './hooks/useChessGame';
 import { useClickToMove } from './hooks/useClickToMove';
@@ -98,6 +98,12 @@ function PlayScreen({ mode }) {
 
   const [previewFen, setPreviewFen] = useState(null);
   const boardDisabled = status !== 'player-turn' || previewFen !== null;
+  const boardSectionRef = useRef(null);
+
+  const handlePreviewFen = (previewedFen) => {
+    setPreviewFen(previewedFen);
+    if (previewedFen) boardSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
 
   const clickToMove = useClickToMove({
     getChess,
@@ -128,7 +134,7 @@ function PlayScreen({ mode }) {
 
   return (
     <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row-reverse lg:items-start">
-      <div className="flex flex-col items-center gap-3 lg:flex-1">
+      <div ref={boardSectionRef} className="flex flex-col items-center gap-3 lg:flex-1">
         <div className="flex w-full max-w-[560px] items-center justify-center gap-3">
           {mode === 'coached' && <EvalBar evalCp={currentEvalCp} />}
           <div className="relative w-full" dir="ltr">
@@ -181,7 +187,7 @@ function PlayScreen({ mode }) {
             gameOverMessage={gameOverMessage}
             onRetry={retryAfterMistake}
             onNewGame={() => resetGame(mode)}
-            onPreviewFen={setPreviewFen}
+            onPreviewFen={handlePreviewFen}
           />
         ) : (
           <FreePlayPanel

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { formatEval } from '../lib/stockfishEngine';
 import { MOVE_CLASSES } from '../lib/gameAnalysis';
@@ -46,6 +46,12 @@ export function GameReviewScreen({ records, summary, studentColor = 'w', onClose
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [previewFen, setPreviewFen] = useState(null);
   const [explanations, setExplanations] = useState({});
+  const boardSectionRef = useRef(null);
+
+  const handlePreviewFen = (previewedFen) => {
+    setPreviewFen(previewedFen);
+    if (previewedFen) boardSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
 
   const selected = selectedIndex >= 0 ? records[selectedIndex] : null;
   const startFen = records[0]?.fenBefore ?? START_FEN;
@@ -111,7 +117,7 @@ export function GameReviewScreen({ records, summary, studentColor = 'w', onClose
       </div>
 
       <div className="flex flex-col gap-6 lg:flex-row-reverse lg:items-start">
-        <div className="w-full max-w-[420px] lg:flex-1">
+        <div ref={boardSectionRef} className="w-full max-w-[420px] lg:flex-1">
           <Chessboard
             options={{
               position: boardFen,
@@ -183,7 +189,7 @@ export function GameReviewScreen({ records, summary, studentColor = 'w', onClose
                 punishingLine={selected.punishingLine}
                 loadingExplanation={currentExplanationState?.loadingExplanation}
                 explanation={currentExplanationState?.explanation}
-                onPreviewFen={setPreviewFen}
+                onPreviewFen={handlePreviewFen}
               />
             </div>
           )}
