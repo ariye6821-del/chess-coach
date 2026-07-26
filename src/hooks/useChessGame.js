@@ -64,6 +64,7 @@ export function useChessGame(initialMode = 'coached') {
 
   const [fen, setFen] = useState(chessRef.current.fen());
   const [moveHistory, setMoveHistory] = useState([]);
+  const [lastMove, setLastMove] = useState(null);
   const [status, setStatus] = useState('loading');
   const [mode, setModeState] = useState(initialMode);
   const [studentColor, setStudentColorState] = useState('w');
@@ -97,6 +98,9 @@ export function useChessGame(initialMode = 'coached') {
   const syncFromChess = useCallback(() => {
     setFen(chessRef.current.fen());
     setMoveHistory(chessRef.current.history());
+    const verboseHistory = chessRef.current.history({ verbose: true });
+    const last = verboseHistory[verboseHistory.length - 1];
+    setLastMove(last ? { from: last.from, to: last.to } : null);
   }, []);
 
   const finishIfGameOver = useCallback(() => {
@@ -140,7 +144,9 @@ export function useChessGame(initialMode = 'coached') {
         blackMoveUci = await selectComputerMove(opponentEngineRef.current, chess.fen(), elo);
       }
       if (!blackMoveUci) {
-        finishIfGameOver();
+        // The engine genuinely has no move (checkmate/stalemate) or failed to
+        // produce one in time - either way, don't leave the UI stuck waiting.
+        if (!finishIfGameOver()) setStatus('player-turn');
         return;
       }
 
@@ -338,6 +344,7 @@ export function useChessGame(initialMode = 'coached') {
   return {
     fen,
     moveHistory,
+    lastMove,
     status,
     mode,
     setMode,

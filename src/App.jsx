@@ -18,6 +18,8 @@ import { formatEval } from './lib/stockfishEngine';
 
 const ADSENSE_SLOT_BANNER = import.meta.env.VITE_ADSENSE_SLOT_BANNER;
 const ADSENSE_SLOT_SIDEBAR = import.meta.env.VITE_ADSENSE_SLOT_SIDEBAR;
+const LAST_MOVE_STYLE = { backgroundColor: 'rgba(250, 204, 21, 0.35)' };
+const BUSY_STATUSES = ['loading', 'evaluating', 'computer-thinking', 'reviewing'];
 
 function StatusBadge({ status }) {
   const map = {
@@ -84,6 +86,7 @@ function PlayScreen({ mode }) {
   const {
     fen,
     moveHistory,
+    lastMove,
     status,
     studentColor,
     setStudentColor,
@@ -137,6 +140,9 @@ function PlayScreen({ mode }) {
   }
 
   const displayFen = previewFen ?? fen;
+  const lastMoveSquareStyles = lastMove
+    ? { [lastMove.from]: LAST_MOVE_STYLE, [lastMove.to]: LAST_MOVE_STYLE }
+    : {};
 
   return (
     <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row-reverse lg:items-start">
@@ -149,7 +155,7 @@ function PlayScreen({ mode }) {
                 position: displayFen,
                 onPieceDrop: boardDisabled ? () => false : handlePieceDrop,
                 onSquareClick: boardDisabled ? undefined : clickToMove.onSquareClick,
-                squareStyles: clickToMove.squareStyles,
+                squareStyles: { ...lastMoveSquareStyles, ...clickToMove.squareStyles },
                 boardOrientation: studentColor === 'b' ? 'black' : 'white',
                 allowDragging: !boardDisabled,
                 canDragPiece: ({ piece }) => !boardDisabled && piece.pieceType.startsWith(studentColor),
@@ -179,12 +185,8 @@ function PlayScreen({ mode }) {
 
         <div className="flex w-full max-w-[560px] flex-wrap items-center justify-between gap-3">
           <StatusBadge status={status} />
-          <PlayerColorSelector
-            value={studentColor}
-            onChange={setStudentColor}
-            disabled={status === 'reviewing' || status === 'loading' || status === 'computer-thinking'}
-          />
-          <DifficultySelector value={difficultyElo} onChange={setDifficultyElo} disabled={status === 'reviewing'} />
+          <PlayerColorSelector value={studentColor} onChange={setStudentColor} disabled={BUSY_STATUSES.includes(status)} />
+          <DifficultySelector value={difficultyElo} onChange={setDifficultyElo} disabled={BUSY_STATUSES.includes(status)} />
           {mode === 'coached' && (
             <span className="font-mono text-sm text-slate-400">הערכת עמדה: {formatEval(currentEvalCp, null)}</span>
           )}

@@ -1,6 +1,10 @@
 const ENGINE_URL = '/engine/stockfish-18-lite-single.js';
 
 const MATE_SCORE = 100000;
+// If the engine hasn't produced a "bestmove" by this point (e.g. a UCI option
+// changed mid-search confused it, or a message got dropped), give up waiting
+// instead of hanging this engine's entire command queue forever.
+const ANALYZE_TIMEOUT_MS = 20000;
 
 /**
  * Thin wrapper around the Stockfish WASM worker.
@@ -50,14 +54,19 @@ export class StockfishEngine {
    *   simulate weaker play, since Stockfish itself can't go below 1320.
    */
   setStrength(elo) {
-    if (elo == null) {
-      this.send('setoption name UCI_LimitStrength value false');
-      this.send('setoption name Skill Level value 20');
-    } else {
-      const clamped = Math.max(1320, Math.min(3190, elo));
-      this.send('setoption name UCI_LimitStrength value true');
-      this.send('setoption name UCI_Elo value ' + clamped);
-    }
+    // Queued onto the same chain as analyze() calls, so this never lands in the
+    // middle of an in-flight search - changing UCI options mid-"go" can confuse
+    // Stockfish into never emitting "bestmove", hanging the queue forever.
+    this.chain = this.chain.then(() => {
+      if (elo == null) {
+        this.send('setoption name UCI_LimitStrength value false');
+        this.send('setoption name Skill Level value 20');
+      } else {
+        const clamped = Math.max(1320, Math.min(3190, elo));
+        this.send('setoption name UCI_LimitStrength value true');
+        this.send('setoption name UCI_Elo value ' + clamped);
+      }
+    });
   }
 
   _setMultiPv(n) {
@@ -73,6 +82,33 @@ export class StockfishEngine {
         new Promise((resolveOuter) => {
           this._setMultiPv(multiPv);
           const lines = new Map();
+          let settled = false;
+
+          const rankedLines = () =>
+            Array.from(lines.entries())
+              .sort((a, b) => a[0] - b[0])
+              .map(([rank, e]) => ({
+                rank,
+                cp: e.mate != null ? (e.mate > 0 ? MATE_SCORE - e.mate : -MATE_SCORE - e.mate) : (e.cp ?? 0),
+                mate: e.mate ?? null,
+                moveUci: e.pv?.[0] ?? null,
+                pv: e.pv ?? [],
+              }));
+
+          const finish = (bestMoveUci) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timeoutId);
+            this._pending = null;
+            resolveOuter({ bestMoveUci, lines: rankedLines() });
+          };
+
+          const timeoutId = setTimeout(() => {
+            // Fall back to the best line found so far (or no move at all) rather
+            // than blocking every future analyze()/analyzeMultiPv() call on this
+            // engine instance indefinitely.
+            finish(lines.get(1)?.pv?.[0] ?? null);
+          }, ANALYZE_TIMEOUT_MS);
 
           this._pending = (line) => {
             const multipvMatch = line.match(/multipv (\d+)/);
@@ -95,18 +131,7 @@ export class StockfishEngine {
 
             const bestMoveMatch = line.match(/^bestmove (\S+)/);
             if (bestMoveMatch) {
-              this._pending = null;
-              const bestMoveUci = bestMoveMatch[1] === '(none)' ? null : bestMoveMatch[1];
-              const ranked = Array.from(lines.entries())
-                .sort((a, b) => a[0] - b[0])
-                .map(([rank, e]) => ({
-                  rank,
-                  cp: e.mate != null ? (e.mate > 0 ? MATE_SCORE - e.mate : -MATE_SCORE - e.mate) : (e.cp ?? 0),
-                  mate: e.mate ?? null,
-                  moveUci: e.pv?.[0] ?? null,
-                  pv: e.pv ?? [],
-                }));
-              resolveOuter({ bestMoveUci, lines: ranked });
+              finish(bestMoveMatch[1] === '(none)' ? null : bestMoveMatch[1]);
             }
           };
 
@@ -157,7 +182,11 @@ export class StockfishEngine {
   }
 
   newGame() {
-    this.send('ucinewgame');
+    // Also queued, so starting a new game while the previous search is still
+    // in flight doesn't inject "ucinewgame" mid-search.
+    this.chain = this.chain.then(() => {
+      this.send('ucinewgame');
+    });
   }
 
   terminate() {
