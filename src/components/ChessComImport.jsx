@@ -11,6 +11,23 @@ import { WeaknessProfile } from './WeaknessProfile';
 const SINGLE_GAME_DEPTH = 11;
 const BULK_DEPTH = 8;
 const BULK_GAME_LIMIT = 8;
+const USERNAME_STORAGE_KEY = 'chess-coach-chesscom-username';
+
+function loadSavedUsername() {
+  try {
+    return localStorage.getItem(USERNAME_STORAGE_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+function saveUsername(username) {
+  try {
+    localStorage.setItem(USERNAME_STORAGE_KEY, username);
+  } catch {
+    // localStorage unavailable (private browsing, quota, etc.) - just won't persist
+  }
+}
 
 function studentRating(game) {
   return game.studentColor === 'w' ? game.white.rating : game.black.rating;
@@ -32,7 +49,7 @@ function emptyAggregate() {
 export function ChessComImport() {
   const engineRef = useRef(null);
   const [engineReady, setEngineReady] = useState(false);
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState(loadSavedUsername);
   const [loadingGames, setLoadingGames] = useState(false);
   const [error, setError] = useState(null);
   const [games, setGames] = useState([]);
@@ -50,6 +67,7 @@ export function ChessComImport() {
 
   const loadGames = async () => {
     if (!username.trim()) return;
+    saveUsername(username.trim());
     setLoadingGames(true);
     setError(null);
     setGames([]);
