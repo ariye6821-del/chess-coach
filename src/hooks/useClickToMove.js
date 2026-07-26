@@ -23,14 +23,12 @@ export function useClickToMove({ getChess, isOwnPiece, disabled, onMove }) {
     (square) => {
       const chess = getChess();
       const moves = chess.moves({ square, verbose: true });
-      if (!moves.length) {
-        clearSelection();
-        return;
-      }
+      // Select the square even with zero legal moves (e.g. a blocked pawn) - the
+      // player should see their click registered rather than nothing happening.
       setSelectedSquare(square);
       setLegalMoves(moves);
     },
-    [getChess, clearSelection]
+    [getChess]
   );
 
   const onSquareClick = useCallback(

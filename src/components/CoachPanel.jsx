@@ -31,6 +31,12 @@ export function CoachPanel({ status, mistake, gameOverMessage, onRetry, onNewGam
 
         {status === 'mistake' && mistake && (
           <div className="space-y-3">
+            <div className="rounded-lg border-2 border-amber-500 bg-amber-950/40 p-3 text-center">
+              <p className="text-sm font-bold text-amber-300">
+                הלוח נעול כרגע. לחצו על "נסה שוב את המהלך" למטה 👇 כדי לבחור מהלך אחר.
+              </p>
+            </div>
+
             <CoachExplanationBox
               classification={mistake.classification}
               badMoveSan={mistake.badMoveSan}
@@ -44,9 +50,9 @@ export function CoachPanel({ status, mistake, gameOverMessage, onRetry, onNewGam
             <button
               onClick={onRetry}
               disabled={mistake.loadingExplanation}
-              className="w-full rounded-lg bg-emerald-600 px-4 py-2 font-bold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full animate-pulse rounded-lg bg-emerald-600 px-4 py-3 text-base font-bold text-white ring-2 ring-emerald-400 transition hover:bg-emerald-500 hover:animate-none disabled:cursor-not-allowed disabled:animate-none disabled:opacity-50"
             >
-              נסה שוב את המהלך
+              🔄 נסה שוב את המהלך
             </button>
           </div>
         )}

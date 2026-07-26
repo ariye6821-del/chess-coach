@@ -6,6 +6,7 @@ import { CoachPanel } from './components/CoachPanel';
 import { EvalBar } from './components/EvalBar';
 import { MoveHistory } from './components/MoveHistory';
 import { DifficultySelector } from './components/DifficultySelector';
+import { PlayerColorSelector } from './components/PlayerColorSelector';
 import { ModeTabs } from './components/ModeTabs';
 import { GameReviewScreen } from './components/GameReviewScreen';
 import { ChessComImport } from './components/ChessComImport';
@@ -84,6 +85,8 @@ function PlayScreen({ mode }) {
     fen,
     moveHistory,
     status,
+    studentColor,
+    setStudentColor,
     difficultyElo,
     setDifficultyElo,
     currentEvalCp,
@@ -110,7 +113,7 @@ function PlayScreen({ mode }) {
 
   const clickToMove = useClickToMove({
     getChess,
-    isOwnPiece: (piece) => piece.pieceType.startsWith('w'),
+    isOwnPiece: (piece) => piece.pieceType.startsWith(studentColor),
     disabled: boardDisabled,
     onMove: handlePieceDrop,
   });
@@ -125,7 +128,7 @@ function PlayScreen({ mode }) {
       <GameReviewScreen
         records={reviewData.records}
         summary={reviewData.summary}
-        studentColor="w"
+        studentColor={studentColor}
         onClose={() => resetGame(mode)}
         title="סקירת המשחק שלך"
         playerElo={difficultyElo}
@@ -139,7 +142,7 @@ function PlayScreen({ mode }) {
     <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row-reverse lg:items-start">
       <div ref={boardSectionRef} className="flex flex-col items-center gap-3 lg:flex-1">
         <div className="flex w-full max-w-[560px] items-center justify-center gap-3">
-          {mode === 'coached' && <EvalBar evalCp={currentEvalCp} />}
+          {mode === 'coached' && <EvalBar evalCp={currentEvalCp} perspective={studentColor} />}
           <div className="relative w-full" dir="ltr">
             <Chessboard
               options={{
@@ -147,15 +150,26 @@ function PlayScreen({ mode }) {
                 onPieceDrop: boardDisabled ? () => false : handlePieceDrop,
                 onSquareClick: boardDisabled ? undefined : clickToMove.onSquareClick,
                 squareStyles: clickToMove.squareStyles,
-                boardOrientation: 'white',
+                boardOrientation: studentColor === 'b' ? 'black' : 'white',
                 allowDragging: !boardDisabled,
-                canDragPiece: ({ piece }) => !boardDisabled && piece.pieceType.startsWith('w'),
+                canDragPiece: ({ piece }) => !boardDisabled && piece.pieceType.startsWith(studentColor),
+                showAnimations: false,
                 darkSquareStyle: { backgroundColor: theme.dark },
                 lightSquareStyle: { backgroundColor: theme.light },
               }}
             />
             {boardDisabled && status !== 'mistake' && status !== 'game-over' && !previewFen && (
               <div className="pointer-events-none absolute inset-0 rounded-md ring-2 ring-sky-500/40" />
+            )}
+            {status === 'mistake' && !previewFen && (
+              <div
+                dir="rtl"
+                className="pointer-events-none absolute inset-0 flex items-end justify-center rounded-md ring-2 ring-amber-500/60"
+              >
+                <span className="mb-2 rounded-full bg-amber-950/90 px-3 py-1 text-xs font-bold text-amber-300 shadow-lg">
+                  🔒 לחצו "נסה שוב" בפאנל המאמן כדי להמשיך
+                </span>
+              </div>
             )}
             {previewFen && (
               <div className="pointer-events-none absolute inset-0 rounded-md ring-2 ring-sky-400 ring-offset-2 ring-offset-slate-950" />
@@ -165,6 +179,11 @@ function PlayScreen({ mode }) {
 
         <div className="flex w-full max-w-[560px] flex-wrap items-center justify-between gap-3">
           <StatusBadge status={status} />
+          <PlayerColorSelector
+            value={studentColor}
+            onChange={setStudentColor}
+            disabled={status === 'reviewing' || status === 'loading' || status === 'computer-thinking'}
+          />
           <DifficultySelector value={difficultyElo} onChange={setDifficultyElo} disabled={status === 'reviewing'} />
           {mode === 'coached' && (
             <span className="font-mono text-sm text-slate-400">הערכת עמדה: {formatEval(currentEvalCp, null)}</span>

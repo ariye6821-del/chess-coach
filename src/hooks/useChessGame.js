@@ -60,11 +60,13 @@ export function useChessGame(initialMode = 'coached') {
   const baselineRef = useRef({ evalCp: 0, bestMoveUci: null });
   const difficultyRef = useRef(null); // null = max strength
   const modeRef = useRef(initialMode);
+  const studentColorRef = useRef('w');
 
   const [fen, setFen] = useState(chessRef.current.fen());
   const [moveHistory, setMoveHistory] = useState([]);
   const [status, setStatus] = useState('loading');
   const [mode, setModeState] = useState(initialMode);
+  const [studentColor, setStudentColorState] = useState('w');
   const [difficultyElo, setDifficultyEloState] = useState(null);
   const [currentEvalCp, setCurrentEvalCp] = useState(0);
   const [mistake, setMistake] = useState(null);
@@ -121,7 +123,7 @@ export function useChessGame(initialMode = 'coached') {
       evalAfterStr: formatCp(mistakeData.evalAfterCp),
       moveNumber: mistakeData.moveNumber,
       continuationSans: mistakeData.punishingLine?.sans ?? [],
-      moverColor: 'w',
+      moverColor: studentColorRef.current,
       classification: mistakeData.classification,
       playerElo: difficultyRef.current,
     });
@@ -166,7 +168,10 @@ export function useChessGame(initialMode = 'coached') {
         const afterAnalysis = await analysisEngine.analyze(fenAfter, { depth: PLAYER_ANALYSIS_DEPTH });
         const evalBeforeCp = baselineRef.current.evalCp;
         const evalAfterCp = afterAnalysis.evalCp;
-        const delta = evalBeforeCp - evalAfterCp;
+        // evalCp is always in White's perspective, so a move's cost to the mover
+        // needs the sign flipped when the student is playing Black.
+        const sign = studentColorRef.current === 'w' ? 1 : -1;
+        const delta = (evalBeforeCp - evalAfterCp) * sign;
 
         if (delta > MISTAKE_THRESHOLD_CP) {
           chess.undo();
@@ -230,7 +235,7 @@ export function useChessGame(initialMode = 'coached') {
       if (!targetSquare) return false;
 
       const chess = chessRef.current;
-      if (chess.turn() !== 'w') return false;
+      if (chess.turn() !== studentColorRef.current) return false;
 
       const fenBeforeMove = chess.fen();
       const moveNumber = chess.moveNumber();
@@ -261,10 +266,14 @@ export function useChessGame(initialMode = 'coached') {
   }, []);
 
   const resetGame = useCallback(
-    (newMode) => {
+    (newMode, newColor) => {
       chessRef.current = new Chess();
       modeRef.current = newMode ?? modeRef.current;
       setModeState(modeRef.current);
+      if (newColor) {
+        studentColorRef.current = newColor;
+        setStudentColorState(newColor);
+      }
       analysisEngineRef.current?.newGame();
       opponentEngineRef.current?.newGame();
       setMistake(null);
@@ -274,25 +283,38 @@ export function useChessGame(initialMode = 'coached') {
       syncFromChess();
       setStatus('loading');
 
-      if (modeRef.current === 'coached') {
-        analysisEngineRef.current
-          ?.analyze(chessRef.current.fen(), { depth: PLAYER_ANALYSIS_DEPTH })
-          .then((baseline) => {
-            baselineRef.current = { evalCp: baseline.evalCp, bestMoveUci: baseline.bestMoveUci };
-            setCurrentEvalCp(baseline.evalCp);
-            setStatus('player-turn');
+      (async () => {
+        if (studentColorRef.current === 'b') {
+          // Computer plays White's opening move before the student gets a turn.
+          setStatus('computer-thinking');
+          await playComputerReply(null);
+          return;
+        }
+        if (modeRef.current === 'coached') {
+          const baseline = await analysisEngineRef.current.analyze(chessRef.current.fen(), {
+            depth: PLAYER_ANALYSIS_DEPTH,
           });
-      } else {
-        setCurrentEvalCp(0);
+          baselineRef.current = { evalCp: baseline.evalCp, bestMoveUci: baseline.bestMoveUci };
+          setCurrentEvalCp(baseline.evalCp);
+        } else {
+          setCurrentEvalCp(0);
+        }
         setStatus('player-turn');
-      }
+      })();
     },
-    [syncFromChess]
+    [syncFromChess, playComputerReply]
   );
 
   const setMode = useCallback(
     (newMode) => {
       resetGame(newMode);
+    },
+    [resetGame]
+  );
+
+  const setStudentColor = useCallback(
+    (newColor) => {
+      resetGame(modeRef.current, newColor);
     },
     [resetGame]
   );
@@ -306,8 +328,8 @@ export function useChessGame(initialMode = 'coached') {
       depth: REVIEW_DEPTH,
       onProgress: (done, total) => setReviewProgress({ done, total }),
     });
-    const summary = summarizeGame(records, { color: 'w' });
-    addPuzzlesFromRecords(records, 'w', 'free-play', difficultyRef.current);
+    const summary = summarizeGame(records, { color: studentColorRef.current });
+    addPuzzlesFromRecords(records, studentColorRef.current, 'free-play', difficultyRef.current);
     setReviewData({ records, summary });
     setReviewProgress(null);
     setStatus(chessRef.current.isGameOver() ? 'game-over' : 'player-turn');
@@ -319,6 +341,8 @@ export function useChessGame(initialMode = 'coached') {
     status,
     mode,
     setMode,
+    studentColor,
+    setStudentColor,
     difficultyElo,
     setDifficultyElo,
     currentEvalCp,
