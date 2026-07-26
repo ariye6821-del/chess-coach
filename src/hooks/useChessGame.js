@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Chess } from 'chess.js';
 import { StockfishEngine } from '../lib/stockfishEngine';
 import { getCoachExplanation } from '../lib/coachApi';
-import { isWeakTier, pickWeightedMove } from '../lib/difficulty';
+import { isWeakTier, pickWeightedMove, randomMoveProbability } from '../lib/difficulty';
 import {
   buildContinuation,
   sanForUci,
@@ -37,6 +37,14 @@ function gameOverReason(chess) {
 
 async function selectComputerMove(opponentEngine, fen, elo) {
   if (isWeakTier(elo)) {
+    if (Math.random() < randomMoveProbability(elo)) {
+      const chess = new Chess(fen);
+      const legalMoves = chess.moves({ verbose: true });
+      if (legalMoves.length) {
+        const mv = legalMoves[Math.floor(Math.random() * legalMoves.length)];
+        return `${mv.from}${mv.to}${mv.promotion || ''}`;
+      }
+    }
     const candidates = await opponentEngine.analyzeMultiPv(fen, { depth: WEAK_MOVE_DEPTH, multiPv: 5 });
     const picked = pickWeightedMove(candidates, elo);
     return picked?.moveUci ?? null;
@@ -188,6 +196,7 @@ export function useChessGame(initialMode = 'coached') {
             evalBeforeWhite: evalBeforeCp,
             evalAfterWhite: evalAfterCp,
             source: 'coached',
+            difficultyElo: difficultyRef.current,
           });
           return;
         }
@@ -297,7 +306,7 @@ export function useChessGame(initialMode = 'coached') {
       onProgress: (done, total) => setReviewProgress({ done, total }),
     });
     const summary = summarizeGame(records, { color: 'w' });
-    addPuzzlesFromRecords(records, 'w', 'free-play');
+    addPuzzlesFromRecords(records, 'w', 'free-play', difficultyRef.current);
     setReviewData({ records, summary });
     setReviewProgress(null);
     setStatus(chessRef.current.isGameOver() ? 'game-over' : 'player-turn');

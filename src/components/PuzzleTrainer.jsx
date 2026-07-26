@@ -5,10 +5,22 @@ import { getUnsolvedPuzzles, getAllPuzzles, markPuzzleSolved, markPuzzleAttempt 
 import { getCoachExplanation } from '../lib/coachApi';
 import { CoachExplanationBox } from './CoachExplanationBox';
 import { formatEval } from '../lib/stockfishEngine';
+import { ELO_PRESETS } from '../lib/difficulty';
 
 const SOURCE_LABELS = { coached: 'מהמשחק עם המאמן', 'free-play': 'ממשחק חופשי', chesscom: 'מ-Chess.com' };
 
+function tierKey(difficultyElo) {
+  return difficultyElo == null ? 'unrated' : String(difficultyElo);
+}
+
+function tierLabel(difficultyElo) {
+  if (difficultyElo == null) return 'ללא רמת קושי מוגדרת';
+  const preset = ELO_PRESETS.find((p) => p.elo === difficultyElo);
+  return preset ? preset.label : String(difficultyElo);
+}
+
 export function PuzzleTrainer() {
+  const [tierFilter, setTierFilter] = useState('all');
   const [queue, setQueue] = useState(() => getUnsolvedPuzzles());
   const [index, setIndex] = useState(0);
   const [displayFen, setDisplayFen] = useState(null);
@@ -18,7 +30,13 @@ export function PuzzleTrainer() {
   const [loadingExplanation, setLoadingExplanation] = useState(false);
   const chessRef = useRef(null);
 
-  const puzzle = queue[index] ?? null;
+  const availableTiers = Array.from(new Set(queue.map((p) => tierKey(p.difficultyElo)))).sort((a, b) => {
+    if (a === 'unrated') return 1;
+    if (b === 'unrated') return -1;
+    return Number(a) - Number(b);
+  });
+  const filteredQueue = tierFilter === 'all' ? queue : queue.filter((p) => tierKey(p.difficultyElo) === tierFilter);
+  const puzzle = filteredQueue[index] ?? null;
   const totalSolved = getAllPuzzles().filter((p) => p.solved).length;
 
   useEffect(() => {
@@ -36,8 +54,13 @@ export function PuzzleTrainer() {
     setIndex(0);
   };
 
+  const changeTierFilter = (value) => {
+    setTierFilter(value);
+    setIndex(0);
+  };
+
   const goNext = () => {
-    setIndex((i) => Math.min(i + 1, queue.length - 1));
+    setIndex((i) => Math.min(i + 1, filteredQueue.length - 1));
   };
 
   const requestExplanation = () => {
@@ -59,7 +82,22 @@ export function PuzzleTrainer() {
     });
   };
 
-  if (!puzzle) {
+  const tierFilterSelect = (
+    <select
+      value={tierFilter}
+      onChange={(e) => changeTierFilter(e.target.value)}
+      className="min-h-9 rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-200"
+    >
+      <option value="all">כל הרמות</option>
+      {availableTiers.map((key) => (
+        <option key={key} value={key}>
+          {key === 'unrated' ? 'ללא רמת קושי' : tierLabel(Number(key))}
+        </option>
+      ))}
+    </select>
+  );
+
+  if (!queue.length) {
     return (
       <div className="mx-auto max-w-2xl rounded-xl border border-slate-700 bg-slate-900/80 p-6 text-center">
         <h2 className="mb-2 text-xl font-bold text-slate-100">🧩 תרגילים אישיים</h2>
@@ -68,6 +106,16 @@ export function PuzzleTrainer() {
           יוצר תרגיל אוטומטית מכל טעות שלכם, כדי שתוכלו לתרגל אותה שוב.
         </p>
         {totalSolved > 0 && <p className="mt-3 text-sm text-emerald-400">פתרתם עד כה {totalSolved} תרגילים 🎉</p>}
+      </div>
+    );
+  }
+
+  if (!puzzle) {
+    return (
+      <div className="mx-auto max-w-2xl rounded-xl border border-slate-700 bg-slate-900/80 p-6 text-center">
+        <h2 className="mb-2 text-xl font-bold text-slate-100">🧩 תרגילים אישיים</h2>
+        <div className="mb-3 flex justify-center">{tierFilterSelect}</div>
+        <p className="text-slate-400">אין תרגילים ברמת הקושי הזו כרגע. נסו רמה אחרת, או בחרו "כל הרמות".</p>
       </div>
     );
   }
@@ -114,10 +162,14 @@ export function PuzzleTrainer() {
     <div className="mx-auto max-w-5xl">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-2xl font-bold text-slate-100">🧩 תרגילים אישיים</h2>
-        <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-bold text-slate-300">
-          תרגיל {index + 1} מתוך {queue.length} · נפתרו בסה"כ {totalSolved}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          {tierFilterSelect}
+          <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-bold text-slate-300">
+            תרגיל {index + 1} מתוך {filteredQueue.length} · נפתרו בסה"כ {totalSolved}
+          </span>
+        </div>
       </div>
+      <p className="mb-3 text-xs text-slate-500">רמת קושי: {tierLabel(puzzle.difficultyElo)}</p>
 
       <div className="flex flex-col gap-6 lg:flex-row-reverse lg:items-start">
         <div className="w-full max-w-[420px] lg:flex-1">
@@ -171,7 +223,7 @@ export function PuzzleTrainer() {
             {boardDisabled && (
               <button
                 onClick={goNext}
-                disabled={index >= queue.length - 1}
+                disabled={index >= filteredQueue.length - 1}
                 className="min-h-11 rounded-md bg-sky-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-40"
               >
                 תרגיל הבא ▶

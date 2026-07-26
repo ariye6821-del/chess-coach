@@ -27,7 +27,17 @@ function makeId() {
  * Adds a single puzzle (a position right before a mistake, with the correct move
  * as the solution), skipping duplicates of the same position + wrong move.
  */
-export function addPuzzle({ fen, solutionSan, badMoveSan, classification, cpLoss, evalBeforeWhite, evalAfterWhite, source }) {
+export function addPuzzle({
+  fen,
+  solutionSan,
+  badMoveSan,
+  classification,
+  cpLoss,
+  evalBeforeWhite,
+  evalAfterWhite,
+  source,
+  difficultyElo,
+}) {
   if (!fen || !solutionSan || !badMoveSan) return;
   const existing = loadPuzzles();
   const key = `${fen}|${badMoveSan}`;
@@ -43,6 +53,7 @@ export function addPuzzle({ fen, solutionSan, badMoveSan, classification, cpLoss
     evalBeforeWhite,
     evalAfterWhite,
     source,
+    difficultyElo: difficultyElo ?? null,
     createdAt: new Date().toISOString(),
     solved: false,
     attempts: 0,
@@ -55,7 +66,7 @@ export function addPuzzle({ fen, solutionSan, badMoveSan, classification, cpLoss
  * as a puzzle. Used after any review (free-play, single Chess.com game, or the
  * bulk multi-game weakness scan) so puzzles accumulate automatically.
  */
-export function addPuzzlesFromRecords(records, studentColor, source) {
+export function addPuzzlesFromRecords(records, studentColor, source, difficultyElo = null) {
   for (const rec of records) {
     if (rec.mover !== studentColor) continue;
     if (rec.classification.key !== 'mistake' && rec.classification.key !== 'blunder') continue;
@@ -69,6 +80,7 @@ export function addPuzzlesFromRecords(records, studentColor, source) {
       evalBeforeWhite: rec.evalBeforeWhite,
       evalAfterWhite: rec.evalAfterWhite,
       source,
+      difficultyElo,
     });
   }
 }

@@ -4,12 +4,17 @@ import { fetchRecentGames, pgnToSanMoves, describeGame } from '../lib/chesscom';
 import { analyzeGameFromMoves, summarizeGame, movePhase } from '../lib/gameAnalysis';
 import { getWeaknessSummary } from '../lib/coachApi';
 import { addPuzzlesFromRecords } from '../lib/puzzleBank';
+import { nearestEloTier } from '../lib/difficulty';
 import { GameReviewScreen } from './GameReviewScreen';
 import { WeaknessProfile } from './WeaknessProfile';
 
 const SINGLE_GAME_DEPTH = 11;
 const BULK_DEPTH = 8;
 const BULK_GAME_LIMIT = 8;
+
+function studentRating(game) {
+  return game.studentColor === 'w' ? game.white.rating : game.black.rating;
+}
 
 function emptyAggregate() {
   return {
@@ -66,7 +71,7 @@ export function ChessComImport() {
       const sanMoves = pgnToSanMoves(game.pgn);
       const records = await analyzeGameFromMoves(engineRef.current, sanMoves, { depth: SINGLE_GAME_DEPTH });
       const summary = summarizeGame(records, { color: game.studentColor });
-      addPuzzlesFromRecords(records, game.studentColor, 'chesscom');
+      addPuzzlesFromRecords(records, game.studentColor, 'chesscom', nearestEloTier(studentRating(game)));
       setSingleReview({
         records,
         summary,
@@ -100,7 +105,7 @@ export function ChessComImport() {
         }
         aggregate.totalMoves += summary.totalMoves;
         aggregate.totalCpLoss += summary.avgCpLoss * summary.totalMoves;
-        addPuzzlesFromRecords(records, game.studentColor, 'chesscom');
+        addPuzzlesFromRecords(records, game.studentColor, 'chesscom', nearestEloTier(studentRating(game)));
 
         for (const rec of records) {
           if (rec.mover !== game.studentColor) continue;
