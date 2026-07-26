@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { useChessGame } from './hooks/useChessGame';
+import { useClickToMove } from './hooks/useClickToMove';
 import { CoachPanel } from './components/CoachPanel';
 import { EvalBar } from './components/EvalBar';
 import { MoveHistory } from './components/MoveHistory';
@@ -92,9 +93,23 @@ function PlayScreen({ mode }) {
     retryAfterMistake,
     resetGame,
     requestGameReview,
+    getChess,
   } = useChessGame(mode);
 
   const [previewFen, setPreviewFen] = useState(null);
+  const boardDisabled = status !== 'player-turn' || previewFen !== null;
+
+  const clickToMove = useClickToMove({
+    getChess,
+    isOwnPiece: (piece) => piece.pieceType.startsWith('w'),
+    disabled: boardDisabled,
+    onMove: handlePieceDrop,
+  });
+
+  useEffect(() => {
+    clickToMove.clearSelection();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fen]);
 
   if (reviewData) {
     return (
@@ -104,11 +119,11 @@ function PlayScreen({ mode }) {
         studentColor="w"
         onClose={() => resetGame(mode)}
         title="סקירת המשחק שלך"
+        playerElo={difficultyElo}
       />
     );
   }
 
-  const boardDisabled = status !== 'player-turn' || previewFen !== null;
   const displayFen = previewFen ?? fen;
 
   return (
@@ -121,6 +136,8 @@ function PlayScreen({ mode }) {
               options={{
                 position: displayFen,
                 onPieceDrop: boardDisabled ? () => false : handlePieceDrop,
+                onSquareClick: boardDisabled ? undefined : clickToMove.onSquareClick,
+                squareStyles: clickToMove.squareStyles,
                 boardOrientation: 'white',
                 allowDragging: !boardDisabled,
                 canDragPiece: ({ piece }) => !boardDisabled && piece.pieceType.startsWith('w'),

@@ -123,6 +123,7 @@ export function useChessGame(initialMode = 'coached') {
       continuationSans: mistakeData.punishingLine?.sans ?? [],
       moverColor: 'w',
       classification: mistakeData.classification,
+      playerElo: difficultyRef.current,
     });
     setMistake((prev) => (prev ? { ...prev, explanation, loadingExplanation: false } : prev));
   }, []);
@@ -330,5 +331,6 @@ export function useChessGame(initialMode = 'coached') {
     resetGame,
     requestGameReview,
     turn: chessRef.current.turn(),
+    getChess: () => chessRef.current,
   };
 }

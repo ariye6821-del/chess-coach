@@ -6,6 +6,7 @@ import { getCoachExplanation } from '../lib/coachApi';
 import { CoachExplanationBox } from './CoachExplanationBox';
 import { formatEval } from '../lib/stockfishEngine';
 import { ELO_PRESETS } from '../lib/difficulty';
+import { useClickToMove } from '../hooks/useClickToMove';
 
 const SOURCE_LABELS = { coached: 'מהמשחק עם המאמן', 'free-play': 'ממשחק חופשי', chesscom: 'מ-Chess.com' };
 
@@ -29,6 +30,7 @@ export function PuzzleTrainer() {
   const [explanation, setExplanation] = useState(null);
   const [loadingExplanation, setLoadingExplanation] = useState(false);
   const chessRef = useRef(null);
+  const boardSectionRef = useRef(null);
 
   const availableTiers = Array.from(new Set(queue.map((p) => tierKey(p.difficultyElo)))).sort((a, b) => {
     if (a === 'unrated') return 1;
@@ -63,8 +65,13 @@ export function PuzzleTrainer() {
     setIndex((i) => Math.min(i + 1, filteredQueue.length - 1));
   };
 
+  const mover = puzzle ? puzzle.fen.split(' ')[1] : 'w';
+  const boardOrientation = mover === 'b' ? 'black' : 'white';
+  const boardDisabled = result === 'correct' || revealed;
+
   const requestExplanation = () => {
     if (!puzzle || loadingExplanation || explanation) return;
+    boardSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setLoadingExplanation(true);
     getCoachExplanation({
       fenBefore: puzzle.fen,
@@ -76,11 +83,59 @@ export function PuzzleTrainer() {
       continuationSans: [],
       moverColor: mover,
       classification: puzzle.classification,
+      playerElo: puzzle.difficultyElo,
     }).then((exp) => {
       setExplanation(exp);
       setLoadingExplanation(false);
     });
   };
+
+  const onPieceDrop = ({ sourceSquare, targetSquare }) => {
+    if (!puzzle || !targetSquare || boardDisabled) return false;
+    if (!chessRef.current) chessRef.current = new Chess(puzzle.fen);
+    const chess = chessRef.current;
+    let moveResult;
+    try {
+      moveResult = chess.move({ from: sourceSquare, to: targetSquare, promotion: 'q' });
+    } catch {
+      moveResult = null;
+    }
+    if (!moveResult) return false;
+
+    if (moveResult.san === puzzle.solutionSan) {
+      setResult('correct');
+      markPuzzleSolved(puzzle.id);
+      setDisplayFen(chess.fen());
+      return true;
+    }
+
+    markPuzzleAttempt(puzzle.id);
+    setResult('wrong');
+    chess.undo();
+    setDisplayFen(chess.fen());
+    return false;
+  };
+
+  const showSolutionMove = () => {
+    if (!puzzle) return;
+    if (!chessRef.current) chessRef.current = new Chess(puzzle.fen);
+    const chess = chessRef.current;
+    chess.move(puzzle.solutionSan);
+    setDisplayFen(chess.fen());
+    setRevealed(true);
+  };
+
+  const clickToMove = useClickToMove({
+    getChess: () => chessRef.current ?? (puzzle ? new Chess(puzzle.fen) : new Chess()),
+    isOwnPiece: (piece) => piece.pieceType.startsWith(mover),
+    disabled: boardDisabled || !puzzle,
+    onMove: onPieceDrop,
+  });
+
+  useEffect(() => {
+    clickToMove.clearSelection();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [puzzle?.id, boardDisabled]);
 
   const tierFilterSelect = (
     <select
@@ -120,44 +175,6 @@ export function PuzzleTrainer() {
     );
   }
 
-  const mover = puzzle.fen.split(' ')[1];
-  const boardOrientation = mover === 'b' ? 'black' : 'white';
-  const boardDisabled = result === 'correct' || revealed;
-
-  const onPieceDrop = ({ sourceSquare, targetSquare }) => {
-    if (!targetSquare || boardDisabled) return false;
-    if (!chessRef.current) chessRef.current = new Chess(puzzle.fen);
-    const chess = chessRef.current;
-    let moveResult;
-    try {
-      moveResult = chess.move({ from: sourceSquare, to: targetSquare, promotion: 'q' });
-    } catch {
-      moveResult = null;
-    }
-    if (!moveResult) return false;
-
-    if (moveResult.san === puzzle.solutionSan) {
-      setResult('correct');
-      markPuzzleSolved(puzzle.id);
-      setDisplayFen(chess.fen());
-      return true;
-    }
-
-    markPuzzleAttempt(puzzle.id);
-    setResult('wrong');
-    chess.undo();
-    setDisplayFen(chess.fen());
-    return false;
-  };
-
-  const showSolutionMove = () => {
-    if (!chessRef.current) chessRef.current = new Chess(puzzle.fen);
-    const chess = chessRef.current;
-    chess.move(puzzle.solutionSan);
-    setDisplayFen(chess.fen());
-    setRevealed(true);
-  };
-
   return (
     <div className="mx-auto max-w-5xl">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -172,12 +189,14 @@ export function PuzzleTrainer() {
       <p className="mb-3 text-xs text-slate-500">רמת קושי: {tierLabel(puzzle.difficultyElo)}</p>
 
       <div className="flex flex-col gap-6 lg:flex-row-reverse lg:items-start">
-        <div className="w-full max-w-[420px] lg:flex-1">
+        <div ref={boardSectionRef} className="w-full max-w-[420px] lg:flex-1">
           <div dir="ltr">
             <Chessboard
               options={{
                 position: displayFen ?? puzzle.fen,
                 onPieceDrop: boardDisabled ? () => false : onPieceDrop,
+                onSquareClick: boardDisabled ? undefined : clickToMove.onSquareClick,
+                squareStyles: clickToMove.squareStyles,
                 boardOrientation,
                 allowDragging: !boardDisabled,
                 showAnimations: false,

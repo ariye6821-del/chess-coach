@@ -71,12 +71,14 @@ export function ChessComImport() {
       const sanMoves = pgnToSanMoves(game.pgn);
       const records = await analyzeGameFromMoves(engineRef.current, sanMoves, { depth: SINGLE_GAME_DEPTH });
       const summary = summarizeGame(records, { color: game.studentColor });
-      addPuzzlesFromRecords(records, game.studentColor, 'chesscom', nearestEloTier(studentRating(game)));
+      const playerElo = nearestEloTier(studentRating(game));
+      addPuzzlesFromRecords(records, game.studentColor, 'chesscom', playerElo);
       setSingleReview({
         records,
         summary,
         studentColor: game.studentColor,
-        title: `${game.white.username} נגד ${game.black.username}`,
+        title: `${game.white.username} (${game.white.rating}) נגד ${game.black.username} (${game.black.rating})`,
+        playerElo,
       });
     } catch (err) {
       setError('שגיאה בניתוח המשחק: ' + err.message);

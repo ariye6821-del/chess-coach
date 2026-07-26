@@ -28,6 +28,7 @@ export const handler = async (event) => {
     continuationSans: body.continuationSans,
     moverColor: body.moverColor,
     classification: body.classification ?? 'mistake',
+    playerElo: body.playerElo ?? null,
   };
 
   if (!hasApiKey()) {

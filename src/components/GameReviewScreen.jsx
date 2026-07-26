@@ -7,12 +7,20 @@ import { CoachExplanationBox } from './CoachExplanationBox';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
+const MOVE_ICONS = {
+  best: '⭐',
+  good: '✓',
+  inaccuracy: '?!',
+  mistake: '?',
+  blunder: '??',
+};
+
 function SummaryChips({ summary }) {
   return (
     <div className="flex flex-wrap justify-center gap-2">
       {Object.values(MOVE_CLASSES).map((cls) => (
         <span key={cls.key} className={`rounded-full px-3 py-1 text-xs font-bold ${cls.badge}`}>
-          {cls.label}: {summary.counts[cls.key]}
+          {MOVE_ICONS[cls.key]} {cls.label}: {summary.counts[cls.key]}
         </span>
       ))}
       <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-bold text-slate-300">
@@ -34,7 +42,7 @@ const HEADER_TEXT_BY_CLASS = {
   blunder: '🚨 כאן הייתה טעות חמורה',
 };
 
-export function GameReviewScreen({ records, summary, studentColor = 'w', onClose, title }) {
+export function GameReviewScreen({ records, summary, studentColor = 'w', onClose, title, playerElo = null }) {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [previewFen, setPreviewFen] = useState(null);
   const [explanations, setExplanations] = useState({});
@@ -61,6 +69,7 @@ export function GameReviewScreen({ records, summary, studentColor = 'w', onClose
       continuationSans: selected.punishingLine?.sans ?? [],
       moverColor: selected.mover,
       classification: selected.classification.key,
+      playerElo,
     }).then((explanation) => {
       setExplanations((prev) => ({ ...prev, [selectedIndex]: { loadingExplanation: false, explanation } }));
     });
@@ -74,11 +83,21 @@ export function GameReviewScreen({ records, summary, studentColor = 'w', onClose
 
   const currentExplanationState = explanations[selectedIndex];
   const boardFen = previewFen ?? (selected ? selected.fenAfter : startFen);
+  const boardOrientation = studentColor === 'b' ? 'black' : 'white';
 
   return (
     <div className="mx-auto max-w-5xl">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-slate-100">{title || 'סקירת משחק'}</h2>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-100">{title || 'סקירת משחק'}</h2>
+          <span
+            className={`mt-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
+              studentColor === 'b' ? 'bg-slate-950 text-slate-100 ring-1 ring-slate-500' : 'bg-slate-100 text-slate-900'
+            }`}
+          >
+            {studentColor === 'b' ? '⚫' : '⚪'} שיחקת בתור {studentColor === 'b' ? 'שחור' : 'לבן'}
+          </span>
+        </div>
         <button
           onClick={onClose}
           className="min-h-11 rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800"
@@ -97,7 +116,7 @@ export function GameReviewScreen({ records, summary, studentColor = 'w', onClose
             options={{
               position: boardFen,
               allowDragging: false,
-              boardOrientation: 'white',
+              boardOrientation,
               showAnimations: false,
               darkSquareStyle: { backgroundColor: '#4f6f8f' },
               lightSquareStyle: { backgroundColor: '#dce6ec' },
@@ -188,14 +207,13 @@ export function GameReviewScreen({ records, summary, studentColor = 'w', onClose
                       } ${isStudent ? '' : 'opacity-70'}`}
                     >
                       {rec.san}
-                      <span className={`mr-1 text-xs ${rec.classification.color}`}>
-                        {rec.classification.key === 'blunder'
-                          ? '??'
-                          : rec.classification.key === 'mistake'
-                            ? '?'
-                            : rec.classification.key === 'inaccuracy'
-                              ? '?!'
-                              : ''}
+                      <span
+                        className={`mr-1 rounded px-1 text-xs font-bold ${
+                          rec.index === selectedIndex ? 'text-white' : rec.classification.badge
+                        }`}
+                        title={rec.classification.label}
+                      >
+                        {MOVE_ICONS[rec.classification.key]}
                       </span>
                     </button>
                   );
