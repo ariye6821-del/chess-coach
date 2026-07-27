@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
 
 const CLIENT_ID = import.meta.env.VITE_ADSENSE_CLIENT_ID;
 
@@ -30,18 +31,22 @@ function ensureAdsenseScript() {
  */
 export function GoogleAd({ slot, className = '', style, format = 'auto', responsive = true }) {
   const pushedRef = useRef(false);
+  // AdSense is web-only (it's against AdSense policy to show inside a native
+  // app/WebView - that's what AdMob is for), so skip it entirely when running
+  // as the packaged Capacitor Android app.
+  const isNative = Capacitor.isNativePlatform();
 
   useEffect(() => {
-    if (!CLIENT_ID || !slot || pushedRef.current) return;
+    if (isNative || !CLIENT_ID || !slot || pushedRef.current) return;
     pushedRef.current = true;
     ensureAdsenseScript()
       .then(() => {
         (window.adsbygoogle = window.adsbygoogle || []).push({});
       })
       .catch((err) => console.error('AdSense script failed to load:', err));
-  }, [slot]);
+  }, [slot, isNative]);
 
-  if (!CLIENT_ID || !slot) return null;
+  if (isNative || !CLIENT_ID || !slot) return null;
 
   return (
     <ins
