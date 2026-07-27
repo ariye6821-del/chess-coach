@@ -1,3 +1,5 @@
+import { Chess } from 'chess.js';
+
 // Curated "how to think" tips shown above the board during coached play - not
 // analysis of the actual position (that's the mistake-detection/hint system),
 // just general thinking-process guidance, phrased at three levels of complexity
@@ -74,4 +76,59 @@ const TIPS = {
 export function getLiveTip(tier, phase, seed = 0) {
   const list = TIPS[tier]?.[phase] || TIPS.intermediate.middlegame;
   return list[seed % list.length];
+}
+
+const PIECE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+const PIECE_NAMES_HE = { p: 'החייל', n: 'הפרש', b: 'הרץ', r: 'הצריח', q: 'המלכה' };
+
+/**
+ * Finds the single worst "free" capture the opponent could make right now
+ * against the student - i.e. taking a piece with something worth less, which
+ * is bad regardless of whether the square is otherwise defended (at best it's
+ * an unfavorable trade). Checked by relabeling the FEN's side-to-move as the
+ * opponent and asking chess.js for their legal captures, since chess.js only
+ * generates moves for whoever's turn a position claims it is.
+ */
+function findUnsafeHang(fen, studentColor) {
+  try {
+    const parts = fen.split(' ');
+    const opponentColor = studentColor === 'w' ? 'b' : 'w';
+    const flippedFen = [parts[0], opponentColor, ...parts.slice(2)].join(' ');
+    const opponentView = new Chess(flippedFen);
+    const captures = opponentView.moves({ verbose: true }).filter((m) => m.captured);
+    let worst = null;
+    for (const m of captures) {
+      const diff = (PIECE_VALUES[m.captured] ?? 0) - (PIECE_VALUES[m.piece] ?? 0);
+      if (diff > 0 && (!worst || diff > worst.diff)) {
+        worst = { square: m.to, targetType: m.captured, diff };
+      }
+    }
+    return worst;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Prefers a tip that's actually about what's happening on the board right now
+ * (check, or a piece hanging to a bad trade) over the generic phase-based bank,
+ * falling back to the latter when nothing urgent stands out.
+ */
+export function getPositionAwareTip({ fen, studentColor, tier, phase, seed }) {
+  try {
+    const chess = new Chess(fen);
+    if (chess.turn() === studentColor && chess.inCheck()) {
+      return 'המלך שלכם בשח! מצאו מהלך שמסלק את האיום - חסימה, בריחה, או תפיסת הכלי המאיים.';
+    }
+  } catch {
+    // malformed fen - fall through to the generic tip bank
+  }
+
+  const hang = findUnsafeHang(fen, studentColor);
+  if (hang) {
+    const pieceName = PIECE_NAMES_HE[hang.targetType] || 'כלי';
+    return `⚠️ שימו לב! ${pieceName} שלכם על ${hang.square} נתון בסכנה - בדקו את זה לפני שממשיכים.`;
+  }
+
+  return getLiveTip(tier, phase, seed);
 }

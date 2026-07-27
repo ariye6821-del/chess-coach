@@ -1,6 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 
-export function PunishingLinePreview({ punishingLine, onPreviewFen }) {
+// A short, plain-language caption for one punishment-line move, derived straight
+// from its SAN suffix ('x' = capture, '+' = check, '#' = mate) - no extra data
+// needed, just enough to narrate what's actually happening at each step instead
+// of leaving the student to read raw move notation on their own.
+function stepCaption(san) {
+  if (san.includes('#')) return `${san} — וזה מט. מכאן המשחק נגמר.`;
+  if (san.includes('x') && san.includes('+')) return `${san} — תפיסת כלי, ועם שח למלך.`;
+  if (san.includes('x')) return `${san} — תפיסת כלי.`;
+  if (san.includes('+')) return `${san} — שח למלך.`;
+  return `${san} — ממשיכים בקו הזה.`;
+}
+
+export function PunishingLinePreview({ punishingLine, onPreviewFen, persona }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(-1); // -1 = position right after the mistake, before the punishment
   const [playing, setPlaying] = useState(false);
@@ -59,16 +71,22 @@ export function PunishingLinePreview({ punishingLine, onPreviewFen }) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="w-full rounded-lg border border-sky-700 bg-sky-950/40 px-3 py-2 text-sm font-bold text-sky-300 transition hover:bg-sky-900/50"
+        className="flex w-full items-center justify-center gap-2 rounded-lg border border-sky-700 bg-sky-950/40 px-3 py-2 text-sm font-bold text-sky-300 transition hover:bg-sky-900/50"
       >
-🎬 הראה לי את ההמשך הצפוי על הלוח
+        {persona && <span className="text-base leading-none">{persona.avatar}</span>}
+        🎬 {persona ? `${persona.name} מראה/ה לי מה יקרה` : 'הראה לי את ההמשך הצפוי על הלוח'}
       </button>
     );
   }
 
+  const currentCaption = step === -1 ? null : stepCaption(punishingLine.sans[step]);
+
   return (
     <div className="space-y-2 rounded-lg border border-sky-700 bg-sky-950/30 p-3">
-      <p className="text-sm font-bold text-sky-300">ההמשך הצפוי:</p>
+      <p className="flex items-center gap-1.5 text-sm font-bold text-sky-300">
+        {persona && <span className="text-base leading-none">{persona.avatar}</span>}
+        {persona ? `${persona.name} מראה/ה:` : 'ההמשך הצפוי:'}
+      </p>
       <div className="flex flex-wrap gap-1 text-sm">
         {punishingLine.sans.map((san, i) => (
           <span key={i} className={`rounded px-1.5 py-0.5 font-mono ${i === step ? 'bg-sky-600 text-white' : 'text-slate-400'}`}>
@@ -76,6 +94,9 @@ export function PunishingLinePreview({ punishingLine, onPreviewFen }) {
           </span>
         ))}
       </div>
+      <p className="min-h-[1.5rem] text-sm text-slate-300">
+        {currentCaption ?? 'זו העמדה מיד אחרי המהלך שלכם - לחצו "הבא" כדי לראות מה קורה.'}
+      </p>
       <div className="grid grid-cols-3 gap-2">
         <button
           onClick={() => setStep((s) => Math.max(-1, s - 1))}

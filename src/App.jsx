@@ -257,7 +257,9 @@ function PlayScreen({ mode }) {
             </button>
           </div>
         )}
-        {mode === 'coached' && <LiveCoachTip playerElo={difficultyElo} plyCount={moveHistory.length} />}
+        {mode === 'coached' && (
+          <LiveCoachTip playerElo={difficultyElo} plyCount={moveHistory.length} fen={fen} studentColor={studentColor} />
+        )}
         <div className="flex w-full max-w-[560px] items-center justify-center gap-3">
           {mode === 'coached' && <EvalBar evalCp={currentEvalCp} perspective={studentColor} />}
           <div className="relative w-full" dir="ltr">
@@ -370,6 +372,7 @@ function PlayScreen({ mode }) {
             status={status}
             mistake={mistake}
             gameOverMessage={gameOverMessage}
+            hasMoves={moveHistory.length > 0}
             onRetry={() => {
               setPreviewFen(null);
               retryAfterMistake();
@@ -378,6 +381,7 @@ function PlayScreen({ mode }) {
               setPreviewFen(null);
               resetGame(mode);
             }}
+            onRequestReview={requestGameReview}
             onPreviewFen={handlePreviewFen}
             playerElo={difficultyElo}
             hintLevel={hintLevel}

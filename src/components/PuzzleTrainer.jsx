@@ -14,6 +14,8 @@ import { TACTIC_LABELS } from '../lib/tacticTags';
 const SOURCE_LABELS = {
   coached: 'מהמשחק עם המאמן',
   'free-play': 'ממשחק חופשי',
+  friend: 'ממשחק מול חבר',
+  endgame: 'ממאמן הסיומים',
   chesscom: 'מ-Chess.com',
   lichess: 'מ-Lichess',
   'pgn-paste': 'ממשחק מודבק',

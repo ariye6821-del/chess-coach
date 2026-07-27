@@ -14,8 +14,10 @@ export function CoachPanel({
   status,
   mistake,
   gameOverMessage,
+  hasMoves,
   onRetry,
   onNewGame,
+  onRequestReview,
   onPreviewFen,
   playerElo,
   hintLevel = 0,
@@ -35,9 +37,26 @@ export function CoachPanel({
 
       <div className="flex-1 space-y-3 overflow-y-auto">
         {status === 'game-over' && (
-          <div className="rounded-lg bg-indigo-900/50 p-4 text-center">
-            <p className="text-base font-bold text-indigo-200">המשחק הסתיים</p>
-            <p className="mt-1 text-sm text-slate-300">{gameOverMessage}</p>
+          <div className="space-y-3">
+            <div className="rounded-lg bg-indigo-900/50 p-4 text-center">
+              <p className="text-base font-bold text-indigo-200">המשחק הסתיים</p>
+              <p className="mt-1 text-sm text-slate-300">{gameOverMessage}</p>
+            </div>
+            {hasMoves && onRequestReview && (
+              <button
+                onClick={onRequestReview}
+                className="w-full rounded-lg bg-sky-600 px-4 py-2 font-bold text-white transition hover:bg-sky-500"
+              >
+                📋 קבלו סיכום מ{persona.name}
+              </button>
+            )}
+          </div>
+        )}
+
+        {status === 'reviewing' && (
+          <div className="flex items-center gap-2 rounded-lg bg-slate-800 p-3 text-sm text-slate-400">
+            <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-500 border-t-transparent" />
+            {persona.name} מכין/ה סיכום, זה עשוי לקחת קצת זמן...
           </div>
         )}
 
@@ -81,6 +100,7 @@ export function CoachPanel({
               loadingExplanation={mistake.loadingExplanation}
               explanation={mistake.explanation}
               onPreviewFen={onPreviewFen}
+              persona={persona}
             />
 
             <button

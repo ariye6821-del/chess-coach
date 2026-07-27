@@ -35,6 +35,14 @@ export async function callChatApi(prompt, maxTokens = 700) {
   return extractJson(text);
 }
 
+// Applied across every prompt below - regardless of skill tier, the coach
+// should read like a real person talking, not a textbook or a lecture, and
+// every point made should be about what's actually happening on the board in
+// front of the student, never a generic "wisdom" line that could apply to any
+// game.
+const CONVERSATIONAL_TONE_RULE =
+  'דבר כמו בן אדם רגיל בשיחה טבעית - לא כמו פרופסור, לא כמו ספר לימוד, ולא במשפטים מנופחים או "חכמים" באופן כללי. אל תשתמש בקלישאות שחמט גנריות ("בשחמט חשוב תמיד...", "כל שחקן טוב יודע ש..."). כל דבר שאתה אומר צריך להתייחס קונקרטית למה שבאמת קרה בעמדה הזו או במהלך הזה - לא למשפט חוכמה שיכול להתאים לכל משחק.';
+
 const CLASSIFICATION_LABELS = {
   best: 'מהלך מיטבי',
   good: 'מהלך טוב',
@@ -72,7 +80,7 @@ export const COACH_PERSONAS = {
     avatar: '♞',
     tagline: 'ניתוח מדויק ומעמיק לשחקנים רציניים',
     voice:
-      'אתה "רב-אמן עומר" - מאמן שחמט מנוסה ומדויק, שמדבר אל שחקנים רציניים כשווה לשווה. אתה משתמש במונחי שחמט מתקדמים, מתייחס לדינמיקה של העמדה ולניואנסים אסטרטגיים, וישיר ותכליתי יותר מרך - בלי לוותר על טון מכבד ומעודד.',
+      'אתה "רב-אמן עומר" - מאמן שחמט מנוסה ומדויק, שמדבר אל שחקנים רציניים כשווה לשווה, בטון של שיחה אמיתית בין שני אנשים שאוהבים שחמט - לא כמו הרצאה או מאמר אקדמי. אתה משתמש במונחי שחמט מתקדמים כשצריך, מתייחס לדינמיקה של העמדה ולניואנסים אסטרטגיים, ישיר ותכליתי יותר מרך - אבל תמיד מדבר כמו בן אדם, לא כמו פרופסור.',
   },
 };
 
@@ -161,6 +169,8 @@ export function buildMovePrompt({
       : 'המהלך הזה היה טוב או מיטבי. חזק את השחקן בחיוב והסבר בקצרה מה עשה נכון ולמה.';
 
   return `${level.persona.voice}
+
+${CONVERSATIONAL_TONE_RULE}
 
 מי התלמיד: ${level.audienceLabel}.
 איך לדבר אליו: ${level.promptRules}
@@ -252,6 +262,8 @@ export function buildWeaknessPrompt({ gamesAnalyzed, counts, avgCpLoss, byPhase,
 
   return `אתה מאמן שחמט שמנתח נתונים ממספר משחקים של תלמיד, כדי לזהות דפוס חולשה חוזר וממשי - לא רק סטטיסטיקה יבשה.
 
+${CONVERSATIONAL_TONE_RULE}
+
 נתונים מצטברים מ-${gamesAnalyzed} משחקים (רק המהלכים של התלמיד):
 - מהלכים מיטביים: ${counts.best}, טובים: ${counts.good}, לא מדויקים: ${counts.inaccuracy}, טעויות: ${counts.mistake}, טעויות חמורות: ${counts.blunder}
 - אובדן מאיות ממוצע למהלך: ${Math.round(avgCpLoss)}
@@ -301,6 +313,8 @@ export function buildGameSummaryPrompt({ counts, avgCpLoss, byPhase, sampleMista
     : '';
 
   return `${level.persona.voice}
+
+${CONVERSATIONAL_TONE_RULE}
 
 מי התלמיד: ${level.audienceLabel}.
 איך לדבר אליו: ${level.promptRules}

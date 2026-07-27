@@ -552,7 +552,10 @@ export function useChessGame(initialMode = 'coached', initialOptions = {}) {
       onProgress: (done, total) => setReviewProgress({ done, total }),
     });
     const summary = summarizeGame(records, { color: studentColorRef.current });
-    addPuzzlesFromRecords(records, studentColorRef.current, 'free-play', difficultyRef.current);
+    // The 'free' mode's puzzles have historically been labeled 'free-play' (a
+    // separate string from the mode key itself) - keep that mapping intact.
+    const reviewSource = modeRef.current === 'free' ? 'free-play' : modeRef.current;
+    addPuzzlesFromRecords(records, studentColorRef.current, reviewSource, difficultyRef.current);
     setReviewData({ records, summary });
     setReviewProgress(null);
     setStatus(chessRef.current.isGameOver() ? 'game-over' : 'player-turn');

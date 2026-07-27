@@ -272,6 +272,7 @@ export function GameReviewScreen({ records, summary, studentColor = 'w', onClose
                 loadingExplanation={currentExplanationState?.loadingExplanation}
                 explanation={currentExplanationState?.explanation}
                 onPreviewFen={handlePreviewFen}
+                persona={getPersonaForElo(playerElo)}
               />
             </div>
           )}

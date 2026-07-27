@@ -26,6 +26,7 @@ export function CoachExplanationBox({
   loadingExplanation,
   explanation,
   onPreviewFen,
+  persona,
 }) {
   const style = INTRO_STYLES[classification] || INTRO_STYLES.mistake;
   const isBad = classification === 'mistake' || classification === 'blunder';
@@ -45,7 +46,7 @@ export function CoachExplanationBox({
         )}
       </div>
 
-      {punishingLine && <PunishingLinePreview punishingLine={punishingLine} onPreviewFen={onPreviewFen} />}
+      {punishingLine && <PunishingLinePreview punishingLine={punishingLine} onPreviewFen={onPreviewFen} persona={persona} />}
 
       {loadingExplanation && (
         <div className="flex items-center gap-2 rounded-lg bg-slate-800 p-3 text-sm text-slate-400">
