@@ -9,6 +9,28 @@ import { playMoveSound, playCheckSound, playGameOverSound } from '../lib/sounds'
 const LAST_MOVE_STYLE = { backgroundColor: 'rgba(250, 204, 21, 0.35)' };
 const CHECK_STYLE = { boxShadow: 'inset 0 0 0 4px rgba(239, 68, 68, 0.85)', backgroundColor: 'rgba(239, 68, 68, 0.35)' };
 
+// Plain STUN is enough on most home/office networks, but mobile carrier
+// networks (and many filtered/firewalled networks) use NAT that blocks direct
+// peer-to-peer UDP entirely - the signaling handshake succeeds (you get a room
+// code) but the actual data connection then never completes. A TURN relay is
+// the standard fallback for that case; openrelay.metered.ca is a free public
+// relay meant for exactly this kind of use.
+const PEER_CONFIG = {
+  config: {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:openrelay.metered.ca:80' },
+      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+      {
+        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+        username: 'openrelayproject',
+        credential: 'openrelayproject',
+      },
+    ],
+  },
+};
+
 function outcomeMessage(chess) {
   if (!chess.isGameOver()) return null;
   if (chess.isCheckmate()) return `שח-מט! ${chess.turn() === 'w' ? 'שחור' : 'לבן'} ניצח/ה`;
@@ -53,7 +75,21 @@ export function OnlineMultiplayer() {
 
   const wireConnection = (conn, colorForMe) => {
     connRef.current = conn;
+    const timeoutId = setTimeout(() => {
+      if (connRef.current === conn) {
+        cleanupPeer();
+        chessRef.current = new Chess();
+        setFen(chessRef.current.fen());
+        setPhase('idle');
+        setRoomCode(null);
+        setMyColor(null);
+        setErrorMessage(
+          'לא הצלחנו להתחבר לחבר - ייתכן שהרשת שלכם (בעיקר רשת סלולרית) חוסמת חיבור ישיר. נסו רשת Wi-Fi אחרת, או נסו שוב.'
+        );
+      }
+    }, 20000);
     conn.on('open', () => {
+      clearTimeout(timeoutId);
       setMyColor(colorForMe);
       setPhase('connected');
     });
@@ -77,8 +113,14 @@ export function OnlineMultiplayer() {
         }
       }
     });
-    conn.on('close', () => setPeerLeft(true));
-    conn.on('error', (err) => setErrorMessage(`שגיאת חיבור: ${err?.message || err}`));
+    conn.on('close', () => {
+      clearTimeout(timeoutId);
+      setPeerLeft(true);
+    });
+    conn.on('error', (err) => {
+      clearTimeout(timeoutId);
+      setErrorMessage(`שגיאת חיבור: ${err?.message || err}`);
+    });
   };
 
   const createRoom = () => {
@@ -86,7 +128,7 @@ export function OnlineMultiplayer() {
     setPhase('hosting');
     chessRef.current = new Chess();
     setFen(chessRef.current.fen());
-    const peer = new Peer();
+    const peer = new Peer(PEER_CONFIG);
     peerRef.current = peer;
     peer.on('open', (id) => setRoomCode(id));
     peer.on('connection', (conn) => wireConnection(conn, 'w'));
@@ -100,7 +142,7 @@ export function OnlineMultiplayer() {
     setPhase('joining');
     chessRef.current = new Chess();
     setFen(chessRef.current.fen());
-    const peer = new Peer();
+    const peer = new Peer(PEER_CONFIG);
     peerRef.current = peer;
     peer.on('open', () => {
       const conn = peer.connect(code);
