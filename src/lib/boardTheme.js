@@ -8,6 +8,7 @@ export const BOARD_THEME_PRESETS = [
   { id: 'gray', name: 'אפור', light: '#e8e8e8', dark: '#7a7a7a' },
   { id: 'purple', name: 'סגול', light: '#e8e0f5', dark: '#8877b8' },
   { id: 'dark', name: 'כהה', light: '#4a4a4a', dark: '#1e1e1e' },
+  { id: 'colorblind', name: 'ידידותי לעיוורי צבעים', light: '#f5e6c8', dark: '#2f6690' },
 ];
 
 export const DEFAULT_BOARD_THEME = BOARD_THEME_PRESETS[0];

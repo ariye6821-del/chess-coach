@@ -1,3 +1,8 @@
+import { getAllPuzzles } from './puzzleBank';
+import { TACTIC_LABELS } from './tacticTags';
+
+const MIN_PERSONAL_POOL = 5;
+
 export const DAILY_PUZZLES = [
   {
     id: 'back-rank-rook',
@@ -40,7 +45,41 @@ function dayOfYear(date) {
   return Math.floor((date - start) / 86400000);
 }
 
+/**
+ * Looks at the student's own puzzle bank for a recurring tactical weakness (the
+ * most frequent tactic tag among puzzles harvested from their real mistakes) and
+ * returns a pool of puzzles matching it - only once there's enough data to trust
+ * the pattern, otherwise null so the caller falls back to the curated set.
+ */
+function personalWeaknessPool() {
+  const puzzles = getAllPuzzles().filter((p) => p.fen && p.solutionSan && p.tacticTags?.length);
+  if (puzzles.length < MIN_PERSONAL_POOL) return null;
+
+  const tagCounts = {};
+  for (const p of puzzles) {
+    for (const tag of p.tacticTags) tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+  }
+  const sorted = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
+  if (!sorted.length) return null;
+  const [worstTag] = sorted[0];
+
+  const pool = puzzles.filter((p) => p.tacticTags.includes(worstTag));
+  return pool.length ? { pool, tag: worstTag } : null;
+}
+
 export function getDailyPuzzle(date = new Date()) {
+  const personal = personalWeaknessPool();
+  if (personal) {
+    const chosen = personal.pool[dayOfYear(date) % personal.pool.length];
+    const label = TACTIC_LABELS[personal.tag]?.label || personal.tag;
+    return {
+      id: `personal-${chosen.id}`,
+      fen: chosen.fen,
+      solutionSan: chosen.solutionSan,
+      description: `חידה מותאמת אישית: הנושא שהכי חוזר בטעויות שלכם הוא "${label}" - הנה הזדמנות לתרגל בדיוק את זה.`,
+      personalized: true,
+    };
+  }
   const index = dayOfYear(date) % DAILY_PUZZLES.length;
   return DAILY_PUZZLES[index];
 }

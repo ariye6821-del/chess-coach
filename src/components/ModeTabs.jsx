@@ -3,12 +3,17 @@ const TABS = [
   { key: 'coached', label: 'עם מאמן' },
   { key: 'free', label: 'משחק חופשי' },
   { key: 'friend', label: '🧑‍🤝‍🧑 מול חבר' },
+  { key: 'online', label: '🌐 מקוון' },
   { key: 'endgames', label: '🏁 סיומים' },
+  { key: 'repertoire', label: '📖 אימון פתיחות' },
   { key: 'rating', label: '📈 דירוג' },
   { key: 'achievements', label: '🎖️ הישגים' },
   { key: 'plan', label: '📋 תוכנית אימונים' },
   { key: 'import', label: 'ייבוא משחקים' },
   { key: 'puzzles', label: '🧩 תרגילים' },
+  { key: 'rush', label: '⚡ Puzzle Rush' },
+  { key: 'analysis', label: '🔎 ניתוח עמדה' },
+  { key: 'backup', label: '💾 גיבוי' },
 ];
 
 export function ModeTabs({ active, onChange }) {
@@ -18,6 +23,7 @@ export function ModeTabs({ active, onChange }) {
         <button
           key={tab.key}
           onClick={() => onChange(tab.key)}
+          aria-current={active === tab.key ? 'page' : undefined}
           className={`min-h-11 whitespace-nowrap rounded-md px-2 py-2 text-xs font-bold transition sm:px-4 sm:text-sm ${
             active === tab.key ? 'bg-sky-600 text-white' : 'text-slate-400 hover:text-slate-200'
           }`}

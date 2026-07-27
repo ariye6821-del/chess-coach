@@ -23,6 +23,8 @@ function netlifyFunctionsDevPlugin() {
     ['/.netlify/functions/analyzeMove', '/netlify/functions/analyzeMove.js'],
     ['/.netlify/functions/weaknessSummary', '/netlify/functions/weaknessSummary.js'],
     ['/.netlify/functions/gameSummary', '/netlify/functions/gameSummary.js'],
+    ['/.netlify/functions/coachChat', '/netlify/functions/coachChat.js'],
+    ['/.netlify/functions/positionAnalysis', '/netlify/functions/positionAnalysis.js'],
   ];
 
   return {

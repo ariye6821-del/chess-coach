@@ -151,6 +151,7 @@ export function PuzzleTrainer() {
     isOwnPiece: (piece) => piece.pieceType.startsWith(mover),
     disabled: boardDisabled || !puzzle,
     onMove: onPieceDrop,
+    boardOrientation,
   });
 
   useEffect(() => {
@@ -237,7 +238,11 @@ export function PuzzleTrainer() {
 
       <div className="flex flex-col gap-6 lg:flex-row-reverse lg:items-start">
         <div ref={boardSectionRef} className="w-full max-w-[420px] lg:flex-1">
-          <div dir="ltr">
+          <div
+            className="rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+            dir="ltr"
+            {...clickToMove.containerProps}
+          >
             <Chessboard
               options={{
                 position: displayFen ?? puzzle.fen,

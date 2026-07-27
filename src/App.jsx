@@ -21,6 +21,11 @@ import { SoundToggle } from './components/SoundToggle';
 import { LiveCoachTip } from './components/LiveCoachTip';
 import { TrainingPlanScreen } from './components/TrainingPlanScreen';
 import { Onboarding } from './components/Onboarding';
+import { PuzzleRush } from './components/PuzzleRush';
+import { BackupScreen } from './components/BackupScreen';
+import { RepertoireTrainer } from './components/RepertoireTrainer';
+import { PositionAnalysis } from './components/PositionAnalysis';
+import { OnlineMultiplayer } from './components/OnlineMultiplayer';
 import { hasOnboarded } from './lib/trainingPlan';
 import { useBoardTheme } from './hooks/useBoardTheme';
 import { formatEval } from './lib/stockfishEngine';
@@ -87,7 +92,7 @@ function StatusBadge({ status }) {
   return <span className={`rounded-full px-3 py-1 text-xs font-bold ${item.color}`}>{item.text}</span>;
 }
 
-function FreePlayPanel({ status, gameOverMessage, hasMoves, canUndo, onReview, onNewGame, onUndo, mode }) {
+function FreePlayPanel({ status, gameOverMessage, hasMoves, canUndo, onReview, onNewGame, onUndo, onResign, onOfferDraw, mode }) {
   const isFriend = mode === 'friend';
   return (
     <aside className="flex h-full min-h-[420px] w-full flex-col rounded-xl border border-slate-700 bg-slate-900/80 p-4 shadow-lg">
@@ -124,6 +129,25 @@ function FreePlayPanel({ status, gameOverMessage, hasMoves, canUndo, onReview, o
           >
             ↩️ בטל מהלך
           </button>
+        )}
+
+        {hasMoves && status === 'player-turn' && (
+          <div className="flex gap-2">
+            <button
+              onClick={onResign}
+              className="flex-1 rounded-lg border border-red-800 px-4 py-2 text-sm font-medium text-red-300 transition hover:bg-red-950/40"
+            >
+              🏳️ התפטרות
+            </button>
+            {isFriend && (
+              <button
+                onClick={onOfferDraw}
+                className="flex-1 rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800"
+              >
+                🤝 הצע תיקו
+              </button>
+            )}
+          </div>
         )}
 
         {hasMoves && status !== 'reviewing' && (
@@ -177,6 +201,8 @@ function PlayScreen({ mode }) {
     cancelPromotion,
     undoLastMove,
     retryAfterMistake,
+    resign,
+    offerDraw,
     resetGame,
     requestGameReview,
     getChess,
@@ -200,11 +226,13 @@ function PlayScreen({ mode }) {
     handlePreviewFen(ply == null ? null : plyFens[ply]);
   };
 
+  const boardOrientation = (mode === 'friend' ? fen.split(' ')[1] : studentColor) === 'b' ? 'black' : 'white';
   const clickToMove = useClickToMove({
     getChess,
     isOwnPiece: (piece) => piece.pieceType.startsWith(mode === 'friend' ? fen.split(' ')[1] : studentColor),
     disabled: boardDisabled,
     onMove: handlePieceDrop,
+    boardOrientation,
   });
 
   useEffect(() => {
@@ -262,14 +290,18 @@ function PlayScreen({ mode }) {
         )}
         <div className="flex w-full max-w-[560px] items-center justify-center gap-3">
           {mode === 'coached' && <EvalBar evalCp={currentEvalCp} perspective={studentColor} />}
-          <div className="relative w-full" dir="ltr">
+          <div
+            className="relative w-full rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+            dir="ltr"
+            {...clickToMove.containerProps}
+          >
             <Chessboard
               options={{
                 position: displayFen,
                 onPieceDrop: boardDisabled ? () => false : handlePieceDrop,
                 onSquareClick: boardDisabled ? undefined : clickToMove.onSquareClick,
                 squareStyles: { ...lastMoveSquareStyles, ...checkSquareStyles, ...hintSquareStyles, ...clickToMove.squareStyles },
-                boardOrientation: (mode === 'friend' ? currentTurn : studentColor) === 'b' ? 'black' : 'white',
+                boardOrientation,
                 allowDragging: !boardDisabled,
                 canDragPiece: ({ piece }) =>
                   !boardDisabled && piece.pieceType.startsWith(mode === 'friend' ? currentTurn : studentColor),
@@ -382,11 +414,15 @@ function PlayScreen({ mode }) {
               resetGame(mode);
             }}
             onRequestReview={requestGameReview}
+            onResign={resign}
             onPreviewFen={handlePreviewFen}
             playerElo={difficultyElo}
             hintLevel={hintLevel}
             onHint={bestMoveUci ? requestHint : undefined}
             hintSan={hintSan}
+            fen={fen}
+            moveHistorySan={moveHistory}
+            studentColor={studentColor}
           />
         ) : (
           <FreePlayPanel
@@ -400,6 +436,8 @@ function PlayScreen({ mode }) {
               resetGame(mode);
             }}
             onUndo={undoLastMove}
+            onResign={resign}
+            onOfferDraw={offerDraw}
             mode={mode}
           />
         )}
@@ -459,8 +497,18 @@ function App() {
           <ChessComImport />
         ) : mode === 'puzzles' ? (
           <PuzzleTrainer key="puzzles" />
+        ) : mode === 'rush' ? (
+          <PuzzleRush key="rush" />
+        ) : mode === 'backup' ? (
+          <BackupScreen key="backup" />
+        ) : mode === 'analysis' ? (
+          <PositionAnalysis key="analysis" />
+        ) : mode === 'online' ? (
+          <OnlineMultiplayer key="online" />
         ) : mode === 'endgames' ? (
           <EndgameTrainer key="endgames" />
+        ) : mode === 'repertoire' ? (
+          <RepertoireTrainer key="repertoire" />
         ) : mode === 'rating' ? (
           <RatingTracker key="rating" />
         ) : mode === 'achievements' ? (

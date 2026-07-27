@@ -477,6 +477,30 @@ export function useChessGame(initialMode = 'coached', initialOptions = {}) {
     setStatus('player-turn');
   }, [status, mode, syncFromChess]);
 
+  // Resigning is always the student's own call, unambiguous regardless of mode -
+  // a loss for whoever can click the button (only ever the student).
+  const resign = useCallback(() => {
+    if (status !== 'player-turn' && status !== 'mistake') return;
+    const message = studentColorRef.current === 'w' ? 'לבן התפטר' : 'שחור התפטר';
+    setMistake(null);
+    setPendingPromotion(null);
+    setGameOverMessage(message);
+    setStatus('game-over');
+    playGameOverSound();
+    if (modeRef.current === 'coached' || modeRef.current === 'free') {
+      recordGameResult({ result: 'loss', opponentElo: difficultyRef.current });
+    }
+  }, [status]);
+
+  // Only meaningful in pass-and-play - there's a real second person to agree with,
+  // unlike offering a draw to the engine.
+  const offerDraw = useCallback(() => {
+    if (modeRef.current !== 'friend' || status !== 'player-turn') return;
+    setGameOverMessage('תיקו בהסכמה הדדית');
+    setStatus('game-over');
+    playGameOverSound();
+  }, [status]);
+
   const retryAfterMistake = useCallback(() => {
     setMistake(null);
     setStatus('player-turn');
@@ -593,6 +617,8 @@ export function useChessGame(initialMode = 'coached', initialOptions = {}) {
     cancelPromotion,
     undoLastMove,
     retryAfterMistake,
+    resign,
+    offerDraw,
     resetGame,
     requestGameReview,
     turn: chessRef.current.turn(),

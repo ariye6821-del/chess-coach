@@ -56,6 +56,7 @@ export function DailyChallenge() {
     isOwnPiece: (piece) => piece.pieceType.startsWith(mover),
     disabled: boardDisabled,
     onMove: onPieceDrop,
+    boardOrientation,
   });
 
   return (
@@ -76,7 +77,11 @@ export function DailyChallenge() {
         </div>
       </div>
 
-      <div className="relative w-full max-w-[420px]" dir="ltr">
+      <div
+        className="relative w-full max-w-[420px] rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+        dir="ltr"
+        {...clickToMove.containerProps}
+      >
         <Chessboard
           options={{
             position: displayFen,

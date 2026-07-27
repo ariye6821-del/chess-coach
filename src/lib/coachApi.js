@@ -126,3 +126,47 @@ export async function getGameSummary(stats) {
     return localGameSummaryFallback(stats);
   }
 }
+
+function localChatFallback() {
+  return {
+    reply:
+      'כרגע אין לי חיבור לניתוח חי, אז אני לא יכול לענות במדויק על זה. תסתכלו טוב על הלוח בינתיים - יש כלי בסכנה? המלך שלכם בטוח?',
+    isFallback: true,
+  };
+}
+
+/**
+ * Sends a free-form question the student typed mid-game to the coach, grounded
+ * in the live position. See netlify/functions/coachChat.js for the LLM call.
+ */
+export async function getCoachChatReply(params) {
+  try {
+    return await callFunction('coachChat', params);
+  } catch (err) {
+    console.error('coachChat request failed, using local fallback:', err);
+    return localChatFallback();
+  }
+}
+
+function localPositionFallback() {
+  return {
+    assessment: 'כרגע אין לי חיבור לניתוח חי של העמדה הזו.',
+    keyIdeas: 'נסו להסתכל בעצמכם: מי שולט יותר במרכז? האם יש כלים לא מפותחים? האם שני המלכים בטוחים?',
+    planForWhite: '',
+    planForBlack: '',
+    isFallback: true,
+  };
+}
+
+/**
+ * Requests a free-standing analysis of an arbitrary FEN position (not
+ * necessarily from the student's own game). See netlify/functions/positionAnalysis.js.
+ */
+export async function getPositionAnalysis(params) {
+  try {
+    return await callFunction('positionAnalysis', params);
+  } catch (err) {
+    console.error('positionAnalysis request failed, using local fallback:', err);
+    return localPositionFallback();
+  }
+}

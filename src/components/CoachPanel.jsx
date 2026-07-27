@@ -1,4 +1,5 @@
 import { CoachExplanationBox } from './CoachExplanationBox';
+import { CoachChat } from './CoachChat';
 import { getPersonaForElo } from '../lib/coachPersona';
 
 const STATUS_MESSAGES = {
@@ -18,11 +19,15 @@ export function CoachPanel({
   onRetry,
   onNewGame,
   onRequestReview,
+  onResign,
   onPreviewFen,
   playerElo,
   hintLevel = 0,
   onHint,
   hintSan,
+  fen,
+  moveHistorySan,
+  studentColor,
 }) {
   const persona = getPersonaForElo(playerElo);
   return (
@@ -62,6 +67,15 @@ export function CoachPanel({
 
         {STATUS_MESSAGES[status] && (
           <div className="rounded-lg bg-slate-800 p-3 text-sm text-slate-300">{STATUS_MESSAGES[status]}</div>
+        )}
+
+        {status === 'player-turn' && hasMoves && onResign && (
+          <button
+            onClick={onResign}
+            className="w-full rounded-lg border border-red-800 px-4 py-2 text-sm font-medium text-red-300 transition hover:bg-red-950/40"
+          >
+            🏳️ התפטרות
+          </button>
         )}
 
         {status === 'player-turn' && onHint && (
@@ -111,6 +125,9 @@ export function CoachPanel({
               🔄 נסה שוב את המהלך
             </button>
           </div>
+        )}
+        {fen && status !== 'reviewing' && (
+          <CoachChat fen={fen} moveHistorySan={moveHistorySan} studentColor={studentColor} playerElo={playerElo} persona={persona} />
         )}
       </div>
 

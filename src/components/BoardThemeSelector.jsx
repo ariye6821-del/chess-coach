@@ -24,6 +24,9 @@ export function BoardThemeSelector() {
       <button
         onClick={() => setOpen((o) => !o)}
         className="flex min-h-9 items-center gap-1.5 rounded-md border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-200 hover:bg-slate-700"
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-label="בחירת צבעי לוח"
       >
         <span
           className="inline-block h-3.5 w-3.5 rounded-sm border border-slate-500"

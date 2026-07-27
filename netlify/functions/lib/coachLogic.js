@@ -335,6 +335,88 @@ ${CONVERSATIONAL_TONE_RULE}
 }`;
 }
 
+/**
+ * Builds a prompt for a free-form question the student asks mid-game (e.g. "why
+ * is this move bad?", "what should I be planning here?"). Unlike buildMovePrompt
+ * (triggered automatically after a specific move), this responds to whatever the
+ * student actually typed, grounded in the live position and recent chat history.
+ */
+export function buildChatPrompt({ fen, moveHistorySan, studentColor, playerElo, question, conversationHistory }) {
+  const level = levelProfile(playerElo);
+  const colorLabel = studentColor === 'b' ? 'שחור' : 'לבן';
+  const movesText = moveHistorySan?.length ? moveHistorySan.join(' ') : '(עדיין לא בוצעו מהלכים במשחק)';
+  const historyText = conversationHistory?.length
+    ? `\n\nהשיחה עד כה בין התלמיד לבינך:\n${conversationHistory
+        .map((m) => `${m.role === 'user' ? 'תלמיד' : 'מאמן'}: ${m.text}`)
+        .join('\n')}`
+    : '';
+
+  return `${level.persona.voice}
+
+${CONVERSATIONAL_TONE_RULE}
+
+מי התלמיד: ${level.audienceLabel}. הוא משחק בתור ${colorLabel}.
+איך לדבר אליו: ${level.promptRules}
+
+מצב הלוח הנוכחי (FEN): ${fen}
+רשימת המהלכים עד כה במשחק: ${movesText}${historyText}
+
+התלמיד שואל אותך עכשיו, באמצע המשחק: "${question}"
+
+ענה לו ישירות, בקצרה (2-5 משפטים), בהתבסס על העמדה האמיתית על הלוח עכשיו - לא באופן כללי. אם השאלה כללית ולא קשורה לעמדה הספציפית, ענה עליה כשאלת שחמט כללית אך עדיין באישיות ובטון שלך. השתמש בשמות משבצות בלטינית (כמו e4, Nf3) בתוך הטקסט העברי כשרלוונטי.
+
+החזר אך ורק אובייקט JSON תקין (ללא טקסט נוסף):
+{
+  "reply": "התשובה שלך לתלמיד, 2-5 משפטים"
+}`;
+}
+
+export function localChatFallback() {
+  return {
+    reply: 'כרגע אין לי חיבור לניתוח חי, אז אני לא יכול לענות במדויק על זה. תסתכלו טוב על הלוח בינתיים - יש כלי בסכנה? המלך שלכם בטוח? זה כמעט תמיד השאלה הראשונה שכדאי לשאול.',
+    isFallback: true,
+  };
+}
+
+/**
+ * Builds a prompt for a free-standing position analysis - the student pastes any
+ * FEN (or a PGN the frontend has already reduced to a final FEN) that isn't
+ * necessarily from one of their own games, and wants to understand the ideas in
+ * it: who stands better, what each side's plan is, and why.
+ */
+export function buildPositionExplanationPrompt({ fen, playerElo }) {
+  const level = levelProfile(playerElo);
+
+  return `${level.persona.voice}
+
+${CONVERSATIONAL_TONE_RULE}
+
+מי התלמיד: ${level.audienceLabel}.
+איך לדבר אליו: ${level.promptRules}
+
+התלמיד הביא לך עמדת שחמט לניתוח (לא בהכרח ממשחק שלו) - FEN: ${fen}
+
+נתח את העמדה הזו: מי בעמדה טובה יותר ולמה (באופן מוחשי, לא רק "לבן טוב יותר"), מהם הרעיונות האסטרטגיים או הטקטיים העיקריים שקיימים בעמדה הזו, ומה התוכנית הסבירה להמשך עבור כל צד. התבסס אך ורק על העמדה הנתונה בפועל.
+
+החזר אך ורק אובייקט JSON תקין (ללא טקסט נוסף):
+{
+  "assessment": "1-2 משפטים על מי בעמדה טובה יותר ולמה, באופן קונקרטי",
+  "keyIdeas": "2-4 משפטים על הרעיונות האסטרטגיים/טקטיים העיקריים בעמדה הספציפית הזו",
+  "planForWhite": "1-2 משפטים על התוכנית הסבירה ביותר עבור לבן מכאן",
+  "planForBlack": "1-2 משפטים על התוכנית הסבירה ביותר עבור שחור מכאן"
+}`;
+}
+
+export function localPositionFallback() {
+  return {
+    assessment: 'כרגע אין לי חיבור לניתוח חי של העמדה הזו.',
+    keyIdeas: 'נסו להסתכל בעצמכם על העמדה: מי שולט יותר במרכז? האם יש כלים לא מפותחים אצל מישהו? האם שני המלכים בטוחים?',
+    planForWhite: '',
+    planForBlack: '',
+    isFallback: true,
+  };
+}
+
 export function localGameSummaryFallback({ counts, byPhase }) {
   const totalGood = counts.best + counts.good;
   const totalBad = counts.mistake + counts.blunder;

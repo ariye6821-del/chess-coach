@@ -88,11 +88,13 @@ function EndgameLessonPlay({ lesson, onExit }) {
   }, [status, getChess, lesson.studentColor, lesson.objective]);
 
   const boardDisabled = status !== 'player-turn';
+  const boardOrientation = lesson.studentColor === 'b' ? 'black' : 'white';
   const clickToMove = useClickToMove({
     getChess,
     isOwnPiece: (piece) => piece.pieceType.startsWith(lesson.studentColor),
     disabled: boardDisabled,
     onMove: handlePieceDrop,
+    boardOrientation,
   });
 
   const lastMoveSquareStyles = lastMove ? { [lastMove.from]: LAST_MOVE_STYLE, [lastMove.to]: LAST_MOVE_STYLE } : {};
@@ -110,14 +112,18 @@ function EndgameLessonPlay({ lesson, onExit }) {
       </div>
       <p className="w-full rounded-lg bg-slate-800 p-3 text-sm text-slate-300">{lesson.description}</p>
 
-      <div className="relative w-full max-w-[420px]" dir="ltr">
+      <div
+        className="relative w-full max-w-[420px] rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+        dir="ltr"
+        {...clickToMove.containerProps}
+      >
         <Chessboard
           options={{
             position: fen,
             onPieceDrop: boardDisabled ? () => false : handlePieceDrop,
             onSquareClick: boardDisabled ? undefined : clickToMove.onSquareClick,
             squareStyles: { ...lastMoveSquareStyles, ...checkSquareStyles, ...clickToMove.squareStyles },
-            boardOrientation: lesson.studentColor === 'b' ? 'black' : 'white',
+            boardOrientation,
             allowDragging: !boardDisabled,
             canDragPiece: ({ piece }) => !boardDisabled && piece.pieceType.startsWith(lesson.studentColor),
             showAnimations: false,
