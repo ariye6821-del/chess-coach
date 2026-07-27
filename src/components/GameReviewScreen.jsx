@@ -5,6 +5,8 @@ import { MOVE_CLASSES } from '../lib/gameAnalysis';
 import { getCoachExplanation } from '../lib/coachApi';
 import { CoachExplanationBox } from './CoachExplanationBox';
 import { useBoardTheme } from '../hooks/useBoardTheme';
+import { getPersonaForElo } from '../lib/coachPersona';
+import { identifyOpening } from '../lib/openings';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -92,6 +94,7 @@ export function GameReviewScreen({ records, summary, studentColor = 'w', onClose
   const currentExplanationState = explanations[selectedIndex];
   const boardFen = previewFen ?? (selected ? selected.fenAfter : startFen);
   const boardOrientation = studentColor === 'b' ? 'black' : 'white';
+  const openingName = identifyOpening(records.map((r) => r.san));
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -105,6 +108,9 @@ export function GameReviewScreen({ records, summary, studentColor = 'w', onClose
           >
             {studentColor === 'b' ? '⚫' : '⚪'} שיחקת בתור {studentColor === 'b' ? 'שחור' : 'לבן'}
           </span>
+          <span className="mr-2 mt-1 inline-flex items-center gap-1.5 rounded-full bg-slate-800 px-2.5 py-1 text-xs font-bold text-slate-300">
+            {getPersonaForElo(playerElo).avatar} {getPersonaForElo(playerElo).name}
+          </span>
         </div>
         <button
           onClick={onClose}
@@ -113,6 +119,8 @@ export function GameReviewScreen({ records, summary, studentColor = 'w', onClose
           חזרה
         </button>
       </div>
+
+      {openingName && <p className="mb-2 text-sm text-slate-500">פתיחה: <span className="font-bold text-slate-400">{openingName}</span></p>}
 
       <div className="mb-4">
         <SummaryChips summary={summary} />

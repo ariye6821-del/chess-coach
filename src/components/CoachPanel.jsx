@@ -1,4 +1,5 @@
 import { CoachExplanationBox } from './CoachExplanationBox';
+import { getPersonaForElo } from '../lib/coachPersona';
 
 const STATUS_MESSAGES = {
   loading: 'טוען את מנוע השחמט...',
@@ -9,12 +10,27 @@ const STATUS_MESSAGES = {
   mistake: null,
 };
 
-export function CoachPanel({ status, mistake, gameOverMessage, onRetry, onNewGame, onPreviewFen }) {
+export function CoachPanel({
+  status,
+  mistake,
+  gameOverMessage,
+  onRetry,
+  onNewGame,
+  onPreviewFen,
+  playerElo,
+  hintLevel = 0,
+  onHint,
+  hintSan,
+}) {
+  const persona = getPersonaForElo(playerElo);
   return (
     <aside className="flex h-full min-h-[420px] w-full flex-col rounded-xl border border-slate-700 bg-slate-900/80 p-4 shadow-lg">
       <div className="mb-3 flex items-center gap-2 border-b border-slate-700 pb-3">
-        <span className="text-2xl">♟️</span>
-        <h2 className="text-lg font-bold text-slate-100">המאמן</h2>
+        <span className="text-2xl">{persona.avatar}</span>
+        <div>
+          <h2 className="text-lg font-bold text-slate-100">{persona.name}</h2>
+          <p className="text-xs text-slate-500">{persona.tagline}</p>
+        </div>
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto">
@@ -27,6 +43,26 @@ export function CoachPanel({ status, mistake, gameOverMessage, onRetry, onNewGam
 
         {STATUS_MESSAGES[status] && (
           <div className="rounded-lg bg-slate-800 p-3 text-sm text-slate-300">{STATUS_MESSAGES[status]}</div>
+        )}
+
+        {status === 'player-turn' && onHint && (
+          <div className="rounded-lg border border-slate-700 bg-slate-800/60 p-3">
+            <button
+              onClick={onHint}
+              disabled={hintLevel >= 2}
+              className="w-full rounded-md bg-slate-700 px-3 py-2 text-sm font-bold text-slate-200 transition hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              💡 {hintLevel === 0 ? 'תנו לי רמז' : hintLevel === 1 ? 'עוד רמז' : 'רמז'}
+            </button>
+            {hintLevel === 1 && (
+              <p className="mt-2 text-xs text-slate-400">הזיזו את הכלי שמסומן בירוק על הלוח.</p>
+            )}
+            {hintLevel >= 2 && hintSan && (
+              <p className="mt-2 text-xs text-slate-400">
+                המהלך המומלץ: <span className="font-mono font-bold text-emerald-400">{hintSan}</span>
+              </p>
+            )}
+          </div>
         )}
 
         {status === 'mistake' && mistake && (

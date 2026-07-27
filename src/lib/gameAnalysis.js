@@ -22,6 +22,32 @@ export function movePhase(moveNumber) {
   return 'endgame';
 }
 
+const PIECE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+
+/** Material balance in pawns-equivalent, positive = White ahead. */
+export function materialDiff(fen) {
+  const board = fen.split(' ')[0];
+  let diff = 0;
+  for (const ch of board) {
+    if (ch === '/' || /\d/.test(ch)) continue;
+    const value = PIECE_VALUES[ch.toLowerCase()] || 0;
+    diff += ch === ch.toUpperCase() ? value : -value;
+  }
+  return diff;
+}
+
+/** Square of the king currently in check, or null if nobody is in check. */
+export function kingInCheckSquare(chess) {
+  if (!chess.inCheck()) return null;
+  const turn = chess.turn();
+  for (const row of chess.board()) {
+    for (const cell of row) {
+      if (cell && cell.type === 'k' && cell.color === turn) return cell.square;
+    }
+  }
+  return null;
+}
+
 export function uciToMoveInput(uci) {
   return {
     from: uci.slice(0, 2),

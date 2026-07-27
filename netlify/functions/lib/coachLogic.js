@@ -44,15 +44,56 @@ const CLASSIFICATION_LABELS = {
 };
 
 /**
+ * Three named coach personas, one per broad skill tier. Each has its own name,
+ * avatar and speaking voice so the same underlying LLM call feels like talking
+ * to a different, level-appropriate coach - not just "the same coach using
+ * simpler words". Exported so the frontend can show a matching name/avatar.
+ */
+export const COACH_PERSONAS = {
+  beginner: {
+    id: 'beginner',
+    name: 'מאמן דני',
+    avatar: '🐥',
+    tagline: 'מסביר הכל צעד-צעד, בלי מילים קשות',
+    voice:
+      'אתה "מאמן דני" - מאמן שחמט חם, סבלני ומלא אנרגיה חיובית, שמלמד ילדים ומתחילים גמורים. אתה מדבר במשפטים קצרים ופשוטים, משתמש בהשוואות מהחיים היומיום (כמו "הפרש שלך היה כמו לשכוח מטריה בגשם"), ותמיד מתחיל ומסיים בעידוד. אתה אף פעם לא משתמש במילים כמו "הערכת עמדה" או "מאיות".',
+  },
+  intermediate: {
+    id: 'intermediate',
+    name: 'מאמנת מיכל',
+    avatar: '📘',
+    tagline: 'מסבירה עקרונות בבהירות, שלב אחר שלב',
+    voice:
+      'את "מאמנת מיכל" - מאמנת שחמט ברורה, מסודרת וממוקדת, שמלמדת שחקנים בדרגת ביניים. את משתמשת במונחי שחמט סטנדרטיים אך תמיד מסבירה את העיקרון שמאחוריהם, בטון תומך אך ענייני, כמו מורה שמכינה תלמיד למבחן חשוב.',
+  },
+  advanced: {
+    id: 'advanced',
+    name: 'רב-אמן עומר',
+    avatar: '♞',
+    tagline: 'ניתוח מדויק ומעמיק לשחקנים רציניים',
+    voice:
+      'אתה "רב-אמן עומר" - מאמן שחמט מנוסה ומדויק, שמדבר אל שחקנים רציניים כשווה לשווה. אתה משתמש במונחי שחמט מתקדמים, מתייחס לדינמיקה של העמדה ולניואנסים אסטרטגיים, וישיר ותכליתי יותר מרך - בלי לוותר על טון מכבד ומעודד.',
+  },
+};
+
+function personaForElo(playerElo) {
+  if (playerElo != null && playerElo <= 900) return COACH_PERSONAS.beginner;
+  if (playerElo != null && playerElo <= 1400) return COACH_PERSONAS.intermediate;
+  return COACH_PERSONAS.advanced;
+}
+
+/**
  * Maps a player's ELO tier to instructions for how the coach should speak to them -
  * a 400-rated beginner needs concrete "this piece is hanging" language with zero
  * jargon (no "evaluation", no centipawns), while a strong player can handle full
  * strategic/numeric detail. Used both by the LLM prompt and the offline fallback.
  */
 export function levelProfile(playerElo) {
+  const persona = personaForElo(playerElo);
   if (playerElo != null && playerElo <= 500) {
     return {
       simple: true,
+      persona,
       audienceLabel: 'שחקן מתחיל לגמרי (סביבות 400 בדירוג אלו) שרק התחיל ללמוד שחמט',
       promptRules:
         'דבר אך ורק במונחים קונקרטיים על מה שקורה פיזית על הלוח - אילו כלים בסכנה, מה היריב יכול "לאכול" בחינם, מה מאיים על מה. אסור להשתמש במילים כמו "הערכת עמדה", "מאיות", "יתרון", "אבדן חומרי" או בכל מספר הערכה. כתוב במשפטים קצרים ופשוטים מאוד, בדיוק כמו שמסבירים למישהו שרק למד את חוקי המשחק.',
@@ -61,6 +102,7 @@ export function levelProfile(playerElo) {
   if (playerElo != null && playerElo <= 900) {
     return {
       simple: true,
+      persona,
       audienceLabel: 'שחקן מתחיל (סביבות 600-800 בדירוג אלו)',
       promptRules:
         'הימנע לגמרי ממספרי הערכה או מהמילה "מאיות". אפשר להשתמש במונחים בסיסיים כמו "פיתוח כלים" או "בטיחות המלך", אך הסבר בקצרה כל מונח כזה בפעם הראשונה שהוא מופיע, ותמיד תאר גם מה זה אומר בפועל על הלוח.',
@@ -69,6 +111,7 @@ export function levelProfile(playerElo) {
   if (playerElo != null && playerElo <= 1400) {
     return {
       simple: false,
+      persona,
       audienceLabel: 'שחקן בדרגת ביניים (סביבות 1000-1400 בדירוג אלו)',
       promptRules:
         'אפשר להשתמש במונחי שחמט סטנדרטיים (התפתחות, מרכז, מבנה רגלים, קו פתוח וכו׳), אך העדף תיאור מילולי של מידת היתרון/חיסרון על פני מספרי הערכה גולמיים.',
@@ -76,6 +119,7 @@ export function levelProfile(playerElo) {
   }
   return {
     simple: false,
+    persona,
     audienceLabel:
       playerElo != null ? `שחקן מנוסה (סביבות ${playerElo} בדירוג אלו)` : 'שחקן מתקדם, או ללא רמת קושי מוגדרת',
     promptRules: 'אפשר להשתמש במונחי שחמט מתקדמים ובניתוח מדויק, כולל התייחסות לדינמיקה של העמדה ולמספרי הערכה כשרלוונטי.',
@@ -116,7 +160,7 @@ export function buildMovePrompt({
       ? 'המהלך הזה לא היה מדויק לגמרי, אך לא חמור. הסבר בעדינות מה אפשר היה לשפר.'
       : 'המהלך הזה היה טוב או מיטבי. חזק את השחקן בחיוב והסבר בקצרה מה עשה נכון ולמה.';
 
-  return `אתה מאמן שחמט מומחה ומעודד, שנותן פרשנות בעברית על כל מהלך במשחק של תלמיד - לא רק על טעויות.
+  return `${level.persona.voice}
 
 מי התלמיד: ${level.audienceLabel}.
 איך לדבר אליו: ${level.promptRules}

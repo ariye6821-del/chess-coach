@@ -1,5 +1,10 @@
+import { tagTacticMotifs } from './tacticTags';
+
 const STORAGE_KEY = 'chess-coach-puzzle-bank-v1';
 const MAX_PUZZLES = 300;
+// Leitner-style spaced repetition: box 1 = due immediately, higher boxes push
+// the next review further out. A wrong attempt always drops back to box 1.
+const LEITNER_INTERVAL_DAYS = { 1: 0, 2: 1, 3: 3, 4: 7, 5: 16 };
 
 function loadPuzzles() {
   try {
@@ -54,9 +59,12 @@ export function addPuzzle({
     evalAfterWhite,
     source,
     difficultyElo: difficultyElo ?? null,
+    tacticTags: tagTacticMotifs({ fenBefore: fen, solutionSan }),
     createdAt: new Date().toISOString(),
     solved: false,
     attempts: 0,
+    box: 1,
+    nextReviewAt: null,
   });
   savePuzzles(existing);
 }
@@ -89,23 +97,38 @@ export function getAllPuzzles() {
   return loadPuzzles();
 }
 
+function isDue(puzzle) {
+  if (!puzzle.nextReviewAt) return true;
+  return new Date(puzzle.nextReviewAt).getTime() <= Date.now();
+}
+
+/** Puzzles due for practice right now - either never solved, or due for spaced review. */
 export function getUnsolvedPuzzles() {
   return loadPuzzles()
-    .filter((p) => !p.solved)
+    .filter(isDue)
     .sort((a, b) => b.cpLoss - a.cpLoss);
 }
 
 export function markPuzzleSolved(id) {
   const list = loadPuzzles();
   const puzzle = list.find((p) => p.id === id);
-  if (puzzle) puzzle.solved = true;
+  if (puzzle) {
+    puzzle.solved = true;
+    puzzle.box = Math.min(5, (puzzle.box || 1) + 1);
+    const days = LEITNER_INTERVAL_DAYS[puzzle.box] ?? 16;
+    puzzle.nextReviewAt = new Date(Date.now() + days * 86400000).toISOString();
+  }
   savePuzzles(list);
 }
 
 export function markPuzzleAttempt(id) {
   const list = loadPuzzles();
   const puzzle = list.find((p) => p.id === id);
-  if (puzzle) puzzle.attempts = (puzzle.attempts || 0) + 1;
+  if (puzzle) {
+    puzzle.attempts = (puzzle.attempts || 0) + 1;
+    puzzle.box = 1;
+    puzzle.nextReviewAt = new Date().toISOString();
+  }
   savePuzzles(list);
 }
 

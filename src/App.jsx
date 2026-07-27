@@ -11,15 +11,63 @@ import { ModeTabs } from './components/ModeTabs';
 import { GameReviewScreen } from './components/GameReviewScreen';
 import { ChessComImport } from './components/ChessComImport';
 import { PuzzleTrainer } from './components/PuzzleTrainer';
+import { EndgameTrainer } from './components/EndgameTrainer';
+import { RatingTracker } from './components/RatingTracker';
+import { DailyChallenge } from './components/DailyChallenge';
+import { Achievements } from './components/Achievements';
 import { GoogleAd } from './components/GoogleAd';
 import { BoardThemeSelector } from './components/BoardThemeSelector';
+import { SoundToggle } from './components/SoundToggle';
 import { useBoardTheme } from './hooks/useBoardTheme';
 import { formatEval } from './lib/stockfishEngine';
+import { sanForUci } from './lib/gameAnalysis';
+import { downloadPgn } from './lib/pgnExport';
+import { identifyOpening } from './lib/openings';
+import { TimeControlSelector, formatClock } from './components/TimeControlSelector';
 
 const ADSENSE_SLOT_BANNER = import.meta.env.VITE_ADSENSE_SLOT_BANNER;
 const ADSENSE_SLOT_SIDEBAR = import.meta.env.VITE_ADSENSE_SLOT_SIDEBAR;
 const LAST_MOVE_STYLE = { backgroundColor: 'rgba(250, 204, 21, 0.35)' };
+const CHECK_STYLE = { boxShadow: 'inset 0 0 0 4px rgba(239, 68, 68, 0.85)', backgroundColor: 'rgba(239, 68, 68, 0.35)' };
+const HINT_STYLE = { boxShadow: 'inset 0 0 0 4px rgba(34, 197, 94, 0.85)' };
 const BUSY_STATUSES = ['loading', 'evaluating', 'computer-thinking', 'reviewing'];
+const PROMOTION_PIECES = [
+  { code: 'q', label: 'מלכה', white: '♕', black: '♛' },
+  { code: 'r', label: 'צריח', white: '♖', black: '♜' },
+  { code: 'b', label: 'רץ', white: '♗', black: '♝' },
+  { code: 'n', label: 'פרש', white: '♘', black: '♞' },
+];
+
+function materialLabel(materialBalance, studentColor) {
+  const studentDiff = studentColor === 'w' ? materialBalance : -materialBalance;
+  if (studentDiff === 0) return 'יתרון חומרי: שווה';
+  return `יתרון חומרי: ${studentDiff > 0 ? '+' : ''}${studentDiff}`;
+}
+
+function PromotionPicker({ studentColor, onChoose, onCancel }) {
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-md bg-slate-950/80 backdrop-blur-sm">
+      <div dir="rtl" className="rounded-xl border border-slate-600 bg-slate-900 p-4 text-center shadow-xl">
+        <p className="mb-3 text-sm font-bold text-slate-200">בחרו כלי לקידום החייל:</p>
+        <div className="flex gap-2">
+          {PROMOTION_PIECES.map((p) => (
+            <button
+              key={p.code}
+              onClick={() => onChoose(p.code)}
+              className="flex h-14 w-14 items-center justify-center rounded-lg border border-slate-600 bg-slate-800 text-3xl text-slate-100 hover:bg-slate-700"
+              title={p.label}
+            >
+              {studentColor === 'b' ? p.black : p.white}
+            </button>
+          ))}
+        </div>
+        <button onClick={onCancel} className="mt-3 text-xs text-slate-400 hover:text-slate-200">
+          ביטול
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function StatusBadge({ status }) {
   const map = {
@@ -35,17 +83,20 @@ function StatusBadge({ status }) {
   return <span className={`rounded-full px-3 py-1 text-xs font-bold ${item.color}`}>{item.text}</span>;
 }
 
-function FreePlayPanel({ status, gameOverMessage, hasMoves, onReview, onNewGame }) {
+function FreePlayPanel({ status, gameOverMessage, hasMoves, onReview, onNewGame, onUndo, mode }) {
+  const isFriend = mode === 'friend';
   return (
     <aside className="flex h-full min-h-[420px] w-full flex-col rounded-xl border border-slate-700 bg-slate-900/80 p-4 shadow-lg">
       <div className="mb-3 flex items-center gap-2 border-b border-slate-700 pb-3">
-        <span className="text-2xl">🎯</span>
-        <h2 className="text-lg font-bold text-slate-100">משחק חופשי</h2>
+        <span className="text-2xl">{isFriend ? '🧑‍🤝‍🧑' : '🎯'}</span>
+        <h2 className="text-lg font-bold text-slate-100">{isFriend ? 'מול חבר' : 'משחק חופשי'}</h2>
       </div>
 
       <div className="flex-1 space-y-3">
         <p className="rounded-lg bg-slate-800 p-3 text-sm text-slate-300">
-          במצב הזה שחקו את המשחק כולו בלי עזרה. בסיום (או בכל שלב) תוכלו לבקש סקירה מלאה עם ניתוח כל מהלך.
+          {isFriend
+            ? 'שני שחקנים על אותו מכשיר, בלי מנוע יריב - העבירו את המכשיר ביניכם בכל תור. בסיום תוכלו לבקש סקירה.'
+            : 'במצב הזה שחקו את המשחק כולו בלי עזרה. בסיום (או בכל שלב) תוכלו לבקש סקירה מלאה עם ניתוח כל מהלך.'}
         </p>
 
         {status === 'game-over' && (
@@ -60,6 +111,15 @@ function FreePlayPanel({ status, gameOverMessage, hasMoves, onReview, onNewGame 
             <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-500 border-t-transparent" />
             מנתח את המשחק, זה עשוי לקחת קצת זמן...
           </div>
+        )}
+
+        {hasMoves && status === 'player-turn' && (
+          <button
+            onClick={onUndo}
+            className="w-full rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800"
+          >
+            ↩️ בטל מהלך
+          </button>
         )}
 
         {hasMoves && status !== 'reviewing' && (
@@ -86,18 +146,32 @@ function PlayScreen({ mode }) {
   const {
     fen,
     moveHistory,
+    plyFens,
     lastMove,
+    checkSquare,
+    materialBalance,
+    pendingPromotion,
     status,
     studentColor,
     setStudentColor,
     difficultyElo,
     setDifficultyElo,
     currentEvalCp,
+    bestMoveUci,
+    timeControl,
+    setTimeControl,
+    whiteTimeMs,
+    blackTimeMs,
+    wasResumed,
+    dismissResumeNotice,
     mistake,
     gameOverMessage,
     reviewData,
     reviewProgress,
     handlePieceDrop,
+    resolvePromotion,
+    cancelPromotion,
+    undoLastMove,
     retryAfterMistake,
     resetGame,
     requestGameReview,
@@ -106,23 +180,33 @@ function PlayScreen({ mode }) {
 
   const [theme] = useBoardTheme();
   const [previewFen, setPreviewFen] = useState(null);
+  const [selectedPly, setSelectedPly] = useState(null);
+  const [hintLevel, setHintLevel] = useState(0);
   const boardDisabled = status !== 'player-turn' || previewFen !== null;
   const boardSectionRef = useRef(null);
+  const requestHint = () => setHintLevel((l) => Math.min(2, l + 1));
 
   const handlePreviewFen = (previewedFen) => {
     setPreviewFen(previewedFen);
     if (previewedFen) boardSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
+  const handleSelectPly = (ply) => {
+    setSelectedPly(ply);
+    handlePreviewFen(ply == null ? null : plyFens[ply]);
+  };
+
   const clickToMove = useClickToMove({
     getChess,
-    isOwnPiece: (piece) => piece.pieceType.startsWith(studentColor),
+    isOwnPiece: (piece) => piece.pieceType.startsWith(mode === 'friend' ? fen.split(' ')[1] : studentColor),
     disabled: boardDisabled,
     onMove: handlePieceDrop,
   });
 
   useEffect(() => {
     clickToMove.clearSelection();
+    setSelectedPly(null);
+    setHintLevel(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fen]);
 
@@ -143,10 +227,30 @@ function PlayScreen({ mode }) {
   const lastMoveSquareStyles = lastMove
     ? { [lastMove.from]: LAST_MOVE_STYLE, [lastMove.to]: LAST_MOVE_STYLE }
     : {};
+  const checkSquareStyles = checkSquare ? { [checkSquare]: CHECK_STYLE } : {};
+  const hintSource = bestMoveUci ? bestMoveUci.slice(0, 2) : null;
+  const hintTarget = bestMoveUci ? bestMoveUci.slice(2, 4) : null;
+  const hintSquareStyles = {};
+  if (hintLevel >= 1 && hintSource) hintSquareStyles[hintSource] = HINT_STYLE;
+  if (hintLevel >= 2 && hintTarget) hintSquareStyles[hintTarget] = HINT_STYLE;
+  const hintSan = hintLevel >= 2 && bestMoveUci ? sanForUci(fen, bestMoveUci) : null;
+  const openingName = identifyOpening(moveHistory);
+  const currentTurn = fen.split(' ')[1];
+  const opponentColor = studentColor === 'w' ? 'b' : 'w';
+  const studentTimeMs = studentColor === 'w' ? whiteTimeMs : blackTimeMs;
+  const opponentTimeMs = studentColor === 'w' ? blackTimeMs : whiteTimeMs;
 
   return (
     <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row-reverse lg:items-start">
       <div ref={boardSectionRef} className="flex flex-col items-center gap-3 lg:flex-1">
+        {wasResumed && (
+          <div className="flex w-full max-w-[560px] items-center justify-between gap-2 rounded-lg border border-sky-700 bg-sky-950/40 px-3 py-2 text-sm text-sky-200">
+            <span>🔄 המשך המשחק שהתחלתם קודם</span>
+            <button onClick={dismissResumeNotice} className="text-xs font-bold text-sky-400 hover:text-sky-300">
+              סגור
+            </button>
+          </div>
+        )}
         <div className="flex w-full max-w-[560px] items-center justify-center gap-3">
           {mode === 'coached' && <EvalBar evalCp={currentEvalCp} perspective={studentColor} />}
           <div className="relative w-full" dir="ltr">
@@ -155,10 +259,11 @@ function PlayScreen({ mode }) {
                 position: displayFen,
                 onPieceDrop: boardDisabled ? () => false : handlePieceDrop,
                 onSquareClick: boardDisabled ? undefined : clickToMove.onSquareClick,
-                squareStyles: { ...lastMoveSquareStyles, ...clickToMove.squareStyles },
-                boardOrientation: studentColor === 'b' ? 'black' : 'white',
+                squareStyles: { ...lastMoveSquareStyles, ...checkSquareStyles, ...hintSquareStyles, ...clickToMove.squareStyles },
+                boardOrientation: (mode === 'friend' ? currentTurn : studentColor) === 'b' ? 'black' : 'white',
                 allowDragging: !boardDisabled,
-                canDragPiece: ({ piece }) => !boardDisabled && piece.pieceType.startsWith(studentColor),
+                canDragPiece: ({ piece }) =>
+                  !boardDisabled && piece.pieceType.startsWith(mode === 'friend' ? currentTurn : studentColor),
                 showAnimations: false,
                 darkSquareStyle: { backgroundColor: theme.dark },
                 lightSquareStyle: { backgroundColor: theme.light },
@@ -180,17 +285,51 @@ function PlayScreen({ mode }) {
             {previewFen && (
               <div className="pointer-events-none absolute inset-0 rounded-md ring-2 ring-sky-400 ring-offset-2 ring-offset-slate-950" />
             )}
+            {pendingPromotion && (
+              <PromotionPicker studentColor={studentColor} onChoose={resolvePromotion} onCancel={cancelPromotion} />
+            )}
           </div>
         </div>
 
         <div className="flex w-full max-w-[560px] flex-wrap items-center justify-between gap-3">
           <StatusBadge status={status} />
-          <PlayerColorSelector value={studentColor} onChange={setStudentColor} disabled={BUSY_STATUSES.includes(status)} />
-          <DifficultySelector value={difficultyElo} onChange={setDifficultyElo} disabled={BUSY_STATUSES.includes(status)} />
+          {mode !== 'friend' && (
+            <>
+              <PlayerColorSelector value={studentColor} onChange={setStudentColor} disabled={BUSY_STATUSES.includes(status)} />
+              <DifficultySelector value={difficultyElo} onChange={setDifficultyElo} disabled={BUSY_STATUSES.includes(status)} />
+            </>
+          )}
+          <TimeControlSelector value={timeControl} onChange={setTimeControl} disabled={moveHistory.length > 0} />
+          <span className="text-sm text-slate-400">{materialLabel(materialBalance, studentColor)}</span>
           {mode === 'coached' && (
             <span className="font-mono text-sm text-slate-400">הערכת עמדה: {formatEval(currentEvalCp, null)}</span>
           )}
         </div>
+
+        {timeControl && mode === 'friend' && (
+          <div className="flex w-full max-w-[560px] items-center justify-between gap-3 font-mono text-sm">
+            <span className={`rounded-md px-2 py-1 ${currentTurn === 'b' ? 'bg-sky-800 text-sky-100' : 'text-slate-400'}`}>
+              ⏱ שחור: {formatClock(blackTimeMs)}
+            </span>
+            <span className={`rounded-md px-2 py-1 ${currentTurn === 'w' ? 'bg-emerald-800 text-emerald-100' : 'text-slate-400'}`}>
+              ⏱ לבן: {formatClock(whiteTimeMs)}
+            </span>
+          </div>
+        )}
+        {timeControl && mode !== 'friend' && (
+          <div className="flex w-full max-w-[560px] items-center justify-between gap-3 font-mono text-sm">
+            <span
+              className={`rounded-md px-2 py-1 ${currentTurn === opponentColor ? 'bg-sky-800 text-sky-100' : 'text-slate-400'}`}
+            >
+              ⏱ יריב: {formatClock(opponentTimeMs)}
+            </span>
+            <span
+              className={`rounded-md px-2 py-1 ${currentTurn === studentColor ? 'bg-emerald-800 text-emerald-100' : 'text-slate-400'}`}
+            >
+              ⏱ אתה: {formatClock(studentTimeMs)}
+            </span>
+          </div>
+        )}
 
         {status === 'reviewing' && reviewProgress && (
           <p className="text-xs text-slate-500">
@@ -198,9 +337,24 @@ function PlayScreen({ mode }) {
           </p>
         )}
 
+        {openingName && (
+          <p className="w-full max-w-[560px] text-xs text-slate-500">
+            פתיחה: <span className="font-bold text-slate-400">{openingName}</span>
+          </p>
+        )}
+
         <div className="w-full max-w-[560px]">
-          <MoveHistory moves={moveHistory} />
+          <MoveHistory moves={moveHistory} onSelectPly={handleSelectPly} selectedPly={selectedPly} />
         </div>
+
+        {moveHistory.length > 0 && (
+          <button
+            onClick={() => downloadPgn(getChess().pgn(), 'chess-coach-game.pgn')}
+            className="w-full max-w-[560px] rounded-lg border border-slate-600 px-3 py-2 text-xs font-medium text-slate-400 transition hover:bg-slate-800"
+          >
+            ⬇️ הורד את המשחק כקובץ PGN
+          </button>
+        )}
       </div>
 
       <div className="w-full lg:w-[380px]">
@@ -212,6 +366,10 @@ function PlayScreen({ mode }) {
             onRetry={retryAfterMistake}
             onNewGame={() => resetGame(mode)}
             onPreviewFen={handlePreviewFen}
+            playerElo={difficultyElo}
+            hintLevel={hintLevel}
+            onHint={bestMoveUci ? requestHint : undefined}
+            hintSan={hintSan}
           />
         ) : (
           <FreePlayPanel
@@ -220,6 +378,8 @@ function PlayScreen({ mode }) {
             hasMoves={moveHistory.length > 0}
             onReview={requestGameReview}
             onNewGame={() => resetGame(mode)}
+            onUndo={undoLastMove}
+            mode={mode}
           />
         )}
 
@@ -255,16 +415,25 @@ function App() {
           <GoogleAd slot={ADSENSE_SLOT_BANNER} className="min-h-[50px] sm:min-h-[90px]" />
         </div>
 
-        <div className="mb-3 flex justify-end">
+        <div className="mb-3 flex justify-end gap-2">
+          <SoundToggle />
           <BoardThemeSelector />
         </div>
 
         <ModeTabs active={mode} onChange={setMode} />
 
-        {mode === 'import' ? (
+        {mode === 'daily' ? (
+          <DailyChallenge key="daily" />
+        ) : mode === 'import' ? (
           <ChessComImport />
         ) : mode === 'puzzles' ? (
           <PuzzleTrainer key="puzzles" />
+        ) : mode === 'endgames' ? (
+          <EndgameTrainer key="endgames" />
+        ) : mode === 'rating' ? (
+          <RatingTracker key="rating" />
+        ) : mode === 'achievements' ? (
+          <Achievements key="achievements" />
         ) : (
           <PlayScreen key={mode} mode={mode} />
         )}

@@ -8,8 +8,16 @@ import { formatEval } from '../lib/stockfishEngine';
 import { ELO_PRESETS } from '../lib/difficulty';
 import { useClickToMove } from '../hooks/useClickToMove';
 import { useBoardTheme } from '../hooks/useBoardTheme';
+import { getPersonaForElo } from '../lib/coachPersona';
+import { TACTIC_LABELS } from '../lib/tacticTags';
 
-const SOURCE_LABELS = { coached: 'מהמשחק עם המאמן', 'free-play': 'ממשחק חופשי', chesscom: 'מ-Chess.com' };
+const SOURCE_LABELS = {
+  coached: 'מהמשחק עם המאמן',
+  'free-play': 'ממשחק חופשי',
+  chesscom: 'מ-Chess.com',
+  lichess: 'מ-Lichess',
+  'pgn-paste': 'ממשחק מודבק',
+};
 
 function tierKey(difficultyElo) {
   return difficultyElo == null ? 'unrated' : String(difficultyElo);
@@ -24,6 +32,7 @@ function tierLabel(difficultyElo) {
 export function PuzzleTrainer() {
   const [theme] = useBoardTheme();
   const [tierFilter, setTierFilter] = useState('all');
+  const [tacticFilter, setTacticFilter] = useState('all');
   const [queue, setQueue] = useState(() => getUnsolvedPuzzles());
   const [index, setIndex] = useState(0);
   const [displayFen, setDisplayFen] = useState(null);
@@ -39,7 +48,10 @@ export function PuzzleTrainer() {
     if (b === 'unrated') return -1;
     return Number(a) - Number(b);
   });
-  const filteredQueue = tierFilter === 'all' ? queue : queue.filter((p) => tierKey(p.difficultyElo) === tierFilter);
+  const availableTactics = Array.from(new Set(queue.flatMap((p) => p.tacticTags || [])));
+  const filteredQueue = queue
+    .filter((p) => tierFilter === 'all' || tierKey(p.difficultyElo) === tierFilter)
+    .filter((p) => tacticFilter === 'all' || (p.tacticTags || []).includes(tacticFilter));
   const puzzle = filteredQueue[index] ?? null;
   const totalSolved = getAllPuzzles().filter((p) => p.solved).length;
 
@@ -60,6 +72,11 @@ export function PuzzleTrainer() {
 
   const changeTierFilter = (value) => {
     setTierFilter(value);
+    setIndex(0);
+  };
+
+  const changeTacticFilter = (value) => {
+    setTacticFilter(value);
     setIndex(0);
   };
 
@@ -154,6 +171,21 @@ export function PuzzleTrainer() {
     </select>
   );
 
+  const tacticFilterSelect = availableTactics.length > 1 && (
+    <select
+      value={tacticFilter}
+      onChange={(e) => changeTacticFilter(e.target.value)}
+      className="min-h-9 rounded-md border border-slate-600 bg-slate-800 px-2 py-1 text-xs text-slate-200"
+    >
+      <option value="all">כל הנושאים</option>
+      {availableTactics.map((key) => (
+        <option key={key} value={key}>
+          {TACTIC_LABELS[key]?.icon} {TACTIC_LABELS[key]?.label || key}
+        </option>
+      ))}
+    </select>
+  );
+
   if (!queue.length) {
     return (
       <div className="mx-auto max-w-2xl rounded-xl border border-slate-700 bg-slate-900/80 p-6 text-center">
@@ -171,8 +203,11 @@ export function PuzzleTrainer() {
     return (
       <div className="mx-auto max-w-2xl rounded-xl border border-slate-700 bg-slate-900/80 p-6 text-center">
         <h2 className="mb-2 text-xl font-bold text-slate-100">🧩 תרגילים אישיים</h2>
-        <div className="mb-3 flex justify-center">{tierFilterSelect}</div>
-        <p className="text-slate-400">אין תרגילים ברמת הקושי הזו כרגע. נסו רמה אחרת, או בחרו "כל הרמות".</p>
+        <div className="mb-3 flex justify-center gap-2">
+          {tierFilterSelect}
+          {tacticFilterSelect}
+        </div>
+        <p className="text-slate-400">אין תרגילים בסינון הזה כרגע. נסו סינון אחר, או בחרו "כל הרמות"/"כל הנושאים".</p>
       </div>
     );
   }
@@ -183,12 +218,20 @@ export function PuzzleTrainer() {
         <h2 className="text-2xl font-bold text-slate-100">🧩 תרגילים אישיים</h2>
         <div className="flex flex-wrap items-center gap-2">
           {tierFilterSelect}
+          {tacticFilterSelect}
           <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-bold text-slate-300">
             תרגיל {index + 1} מתוך {filteredQueue.length} · נפתרו בסה"כ {totalSolved}
           </span>
         </div>
       </div>
-      <p className="mb-3 text-xs text-slate-500">רמת קושי: {tierLabel(puzzle.difficultyElo)}</p>
+      <p className="mb-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+        <span>רמת קושי: {tierLabel(puzzle.difficultyElo)}</span>
+        {(puzzle.tacticTags || []).map((tag) => (
+          <span key={tag} className="rounded-full bg-slate-800 px-2 py-0.5 font-bold text-slate-300">
+            {TACTIC_LABELS[tag]?.icon} {TACTIC_LABELS[tag]?.label || tag}
+          </span>
+        ))}
+      </p>
 
       <div className="flex flex-col gap-6 lg:flex-row-reverse lg:items-start">
         <div ref={boardSectionRef} className="w-full max-w-[420px] lg:flex-1">
@@ -261,7 +304,7 @@ export function PuzzleTrainer() {
           {(loadingExplanation || explanation) && (
             <div className="mt-3">
               <CoachExplanationBox
-                headerText="🎓 הסבר"
+                headerText={`${getPersonaForElo(puzzle.difficultyElo).avatar} ${getPersonaForElo(puzzle.difficultyElo).name} מסביר:`}
                 classification={puzzle.classification}
                 badMoveSan={puzzle.badMoveSan}
                 bestMoveSan={puzzle.solutionSan}

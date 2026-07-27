@@ -10,8 +10,13 @@ import {
   analyzeGameFromMoves,
   summarizeGame,
   classifyMove,
+  materialDiff,
+  kingInCheckSquare,
 } from '../lib/gameAnalysis';
 import { addPuzzle, addPuzzlesFromRecords } from '../lib/puzzleBank';
+import { saveActiveGame, loadActiveGame, clearActiveGame } from '../lib/gameSave';
+import { playMoveSound, playCaptureSound, playCheckSound, playMistakeSound, playGameOverSound } from '../lib/sounds';
+import { recordGameResult, studentResultFromGame } from '../lib/rating';
 
 const MISTAKE_THRESHOLD_CP = 150; // 1.5 pawns
 const PLAYER_ANALYSIS_DEPTH = 14;
@@ -49,6 +54,12 @@ function gameOverReason(chess) {
   return null;
 }
 
+function playMoveResultSound(chess, moveResult) {
+  if (chess.inCheck()) playCheckSound();
+  else if (moveResult?.captured) playCaptureSound();
+  else playMoveSound();
+}
+
 async function selectComputerMove(opponentEngine, fen, elo) {
   if (isWeakTier(elo)) {
     if (Math.random() < randomMoveProbability(elo)) {
@@ -67,27 +78,38 @@ async function selectComputerMove(opponentEngine, fen, elo) {
   return result.bestMoveUci;
 }
 
-export function useChessGame(initialMode = 'coached') {
-  const chessRef = useRef(new Chess());
+export function useChessGame(initialMode = 'coached', initialOptions = {}) {
+  const { fen: initialFen, studentColor: initialStudentColor, difficultyElo: initialDifficultyElo } = initialOptions;
+  const chessRef = useRef(initialFen ? new Chess(initialFen) : new Chess());
   const analysisEngineRef = useRef(null); // always full strength - objective truth
   const opponentEngineRef = useRef(null); // configured to the chosen difficulty
   const baselineRef = useRef({ evalCp: 0, bestMoveUci: null });
-  const difficultyRef = useRef(null); // null = max strength
+  const difficultyRef = useRef(initialDifficultyElo ?? null); // null = max strength
   const modeRef = useRef(initialMode);
-  const studentColorRef = useRef('w');
+  const studentColorRef = useRef(initialStudentColor ?? 'w');
 
   const [fen, setFen] = useState(chessRef.current.fen());
   const [moveHistory, setMoveHistory] = useState([]);
+  const [plyFens, setPlyFens] = useState([]);
   const [lastMove, setLastMove] = useState(null);
+  const [checkSquare, setCheckSquare] = useState(null);
+  const [materialBalance, setMaterialBalance] = useState(0);
+  const [pendingPromotion, setPendingPromotion] = useState(null);
   const [status, setStatus] = useState('loading');
   const [mode, setModeState] = useState(initialMode);
-  const [studentColor, setStudentColorState] = useState('w');
-  const [difficultyElo, setDifficultyEloState] = useState(null);
+  const [studentColor, setStudentColorState] = useState(studentColorRef.current);
+  const [difficultyElo, setDifficultyEloState] = useState(difficultyRef.current);
   const [currentEvalCp, setCurrentEvalCp] = useState(0);
+  const [bestMoveUci, setBestMoveUci] = useState(null);
   const [mistake, setMistake] = useState(null);
   const [gameOverMessage, setGameOverMessage] = useState(null);
   const [reviewData, setReviewData] = useState(null);
   const [reviewProgress, setReviewProgress] = useState(null);
+  const [wasResumed, setWasResumed] = useState(false);
+  const timeControlRef = useRef(null); // null = no clock, or { initialMs }
+  const [timeControl, setTimeControlState] = useState(null);
+  const [whiteTimeMs, setWhiteTimeMs] = useState(null);
+  const [blackTimeMs, setBlackTimeMs] = useState(null);
 
   useEffect(() => {
     const analysisEngine = new StockfishEngine();
@@ -95,11 +117,31 @@ export function useChessGame(initialMode = 'coached') {
     analysisEngineRef.current = analysisEngine;
     opponentEngineRef.current = opponentEngine;
 
+    const saved = loadActiveGame(initialMode);
+    if (saved?.pgn) {
+      try {
+        const restored = new Chess();
+        restored.loadPgn(saved.pgn);
+        if (restored.history().length) {
+          chessRef.current = restored;
+          studentColorRef.current = saved.studentColor ?? 'w';
+          setStudentColorState(studentColorRef.current);
+          difficultyRef.current = saved.difficultyElo ?? null;
+          setDifficultyEloState(difficultyRef.current);
+          setWasResumed(true);
+        }
+      } catch {
+        // corrupt/incompatible save - just start a fresh game
+      }
+    }
+
     Promise.all([analysisEngine.init(), opponentEngine.init()]).then(async () => {
       opponentEngine.setStrength(difficultyRef.current);
+      syncFromChess();
       const baseline = await analysisEngine.analyze(chessRef.current.fen(), { depth: PLAYER_ANALYSIS_DEPTH });
       baselineRef.current = { evalCp: baseline.evalCp, bestMoveUci: baseline.bestMoveUci };
       setCurrentEvalCp(baseline.evalCp);
+      setBestMoveUci(baseline.bestMoveUci);
       setStatus('player-turn');
     });
 
@@ -107,7 +149,67 @@ export function useChessGame(initialMode = 'coached') {
       analysisEngine.terminate();
       opponentEngine.terminate();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Persist the in-progress game whenever it's safely the student's turn, so it
+  // can be resumed after closing the tab/app; cleared once the game ends or resets.
+  useEffect(() => {
+    if (status === 'player-turn' && chessRef.current.history().length) {
+      saveActiveGame(modeRef.current, {
+        pgn: chessRef.current.pgn(),
+        studentColor: studentColorRef.current,
+        difficultyElo: difficultyRef.current,
+      });
+    } else if (status === 'game-over') {
+      clearActiveGame(modeRef.current);
+    }
+  }, [status, fen]);
+
+  const setTimeControl = useCallback((tc) => {
+    timeControlRef.current = tc;
+    setTimeControlState(tc);
+    setWhiteTimeMs(tc?.initialMs ?? null);
+    setBlackTimeMs(tc?.initialMs ?? null);
+  }, []);
+
+  // Ticks down whichever side is currently to move while the clock is running -
+  // only while a live decision is actually in progress (not mid-mistake/review).
+  useEffect(() => {
+    if (!timeControl) return;
+    if (!['player-turn', 'computer-thinking', 'evaluating'].includes(status)) return;
+    let lastTick = Date.now();
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const elapsed = now - lastTick;
+      lastTick = now;
+      if (chessRef.current.turn() === 'w') {
+        setWhiteTimeMs((t) => (t == null ? t : Math.max(0, t - elapsed)));
+      } else {
+        setBlackTimeMs((t) => (t == null ? t : Math.max(0, t - elapsed)));
+      }
+    }, 250);
+    return () => clearInterval(interval);
+  }, [timeControl, status]);
+
+  // Flag-fall: either side hitting zero ends the game immediately.
+  useEffect(() => {
+    if (!timeControl || status === 'game-over') return;
+    if (whiteTimeMs === 0) {
+      const message = 'לבן הפסיד על הזמן';
+      setGameOverMessage(message);
+      setStatus('game-over');
+      playGameOverSound();
+      recordRatingIfApplicable(message);
+    } else if (blackTimeMs === 0) {
+      const message = 'שחור הפסיד על הזמן';
+      setGameOverMessage(message);
+      setStatus('game-over');
+      playGameOverSound();
+      recordRatingIfApplicable(message);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [whiteTimeMs, blackTimeMs, timeControl, status]);
 
   const syncFromChess = useCallback(() => {
     setFen(chessRef.current.fen());
@@ -115,16 +217,29 @@ export function useChessGame(initialMode = 'coached') {
     const verboseHistory = chessRef.current.history({ verbose: true });
     const last = verboseHistory[verboseHistory.length - 1];
     setLastMove(last ? { from: last.from, to: last.to } : null);
+    setPlyFens(verboseHistory.map((m) => m.after));
+    setCheckSquare(kingInCheckSquare(chessRef.current));
+    setMaterialBalance(materialDiff(chessRef.current.fen()));
+  }, []);
+
+  // Rating only reflects real games against the engine, not pass-and-play or drills.
+  const recordRatingIfApplicable = useCallback((reason) => {
+    if (modeRef.current !== 'coached' && modeRef.current !== 'free') return;
+    const result = studentResultFromGame(chessRef.current, studentColorRef.current, reason);
+    if (result) recordGameResult({ result, opponentElo: difficultyRef.current });
   }, []);
 
   const finishIfGameOver = useCallback(() => {
     if (chessRef.current.isGameOver()) {
-      setGameOverMessage(gameOverReason(chessRef.current));
+      const reason = gameOverReason(chessRef.current);
+      setGameOverMessage(reason);
       setStatus('game-over');
+      playGameOverSound();
+      recordRatingIfApplicable(reason);
       return true;
     }
     return false;
-  }, []);
+  }, [recordRatingIfApplicable]);
 
   const setDifficultyElo = useCallback((elo) => {
     difficultyRef.current = elo;
@@ -169,7 +284,8 @@ export function useChessGame(initialMode = 'coached') {
       const minThink = minThinkTimeMs(elo);
       if (elapsed < minThink) await sleep(minThink - elapsed);
 
-      chess.move(uciToMoveInput(blackMoveUci));
+      const computerMoveResult = chess.move(uciToMoveInput(blackMoveUci));
+      playMoveResultSound(chess, computerMoveResult);
       syncFromChess();
 
       if (finishIfGameOver()) return;
@@ -178,6 +294,7 @@ export function useChessGame(initialMode = 'coached') {
         const nextBaseline = await analysisEngineRef.current.analyze(chess.fen(), { depth: PLAYER_ANALYSIS_DEPTH });
         baselineRef.current = { evalCp: nextBaseline.evalCp, bestMoveUci: nextBaseline.bestMoveUci };
         setCurrentEvalCp(nextBaseline.evalCp);
+        setBestMoveUci(nextBaseline.bestMoveUci);
       }
       setStatus('player-turn');
     },
@@ -217,6 +334,7 @@ export function useChessGame(initialMode = 'coached') {
           };
           setMistake(mistakeData);
           setStatus('mistake');
+          playMistakeSound();
           requestExplanation(mistakeData);
           addPuzzle({
             fen: fenBeforeMove,
@@ -254,36 +372,94 @@ export function useChessGame(initialMode = 'coached') {
     [syncFromChess, finishIfGameOver, playComputerReply]
   );
 
-  const handlePieceDrop = useCallback(
-    ({ sourceSquare, targetSquare }) => {
-      if (status !== 'player-turn') return false;
-      if (!targetSquare) return false;
+  // Pass-and-play: both sides are human, on the same device - there's no engine
+  // opponent to reply, just hand the turn straight back.
+  const handlePieceDropFriend = useCallback(
+    (chess) => {
+      syncFromChess();
+      if (finishIfGameOver()) return;
+      setStatus('player-turn');
+    },
+    [syncFromChess, finishIfGameOver]
+  );
 
+  const completeMove = useCallback(
+    (sourceSquare, targetSquare, promotionPiece = 'q') => {
       const chess = chessRef.current;
-      if (chess.turn() !== studentColorRef.current) return false;
-
       const fenBeforeMove = chess.fen();
       const moveNumber = chess.moveNumber();
       let moveResult;
       try {
-        moveResult = chess.move({ from: sourceSquare, to: targetSquare, promotion: 'q' });
+        moveResult = chess.move({ from: sourceSquare, to: targetSquare, promotion: promotionPiece });
       } catch {
         moveResult = null;
       }
       if (!moveResult) return false;
 
+      playMoveResultSound(chess, moveResult);
       syncFromChess();
 
       if (mode === 'coached') {
         handlePieceDropCoached(chess, fenBeforeMove, moveNumber, moveResult.san);
+      } else if (mode === 'friend') {
+        handlePieceDropFriend(chess);
       } else {
         handlePieceDropFree(chess);
       }
 
       return true;
     },
-    [status, mode, syncFromChess, handlePieceDropCoached, handlePieceDropFree]
+    [mode, syncFromChess, handlePieceDropCoached, handlePieceDropFree, handlePieceDropFriend]
   );
+
+  const handlePieceDrop = useCallback(
+    ({ sourceSquare, targetSquare }) => {
+      if (status !== 'player-turn') return false;
+      if (!targetSquare) return false;
+
+      const chess = chessRef.current;
+      // In pass-and-play both sides are human, so either color may move on its turn.
+      if (mode !== 'friend' && chess.turn() !== studentColorRef.current) return false;
+
+      const piece = chess.get(sourceSquare);
+      const targetRank = targetSquare[1];
+      const needsPromotionChoice =
+        piece?.type === 'p' && ((piece.color === 'w' && targetRank === '8') || (piece.color === 'b' && targetRank === '1'));
+
+      if (needsPromotionChoice) {
+        // Don't commit the move yet - let the piece revert and show a picker;
+        // resolvePromotion() completes the actual move once the student chooses.
+        setPendingPromotion({ sourceSquare, targetSquare });
+        return false;
+      }
+
+      return completeMove(sourceSquare, targetSquare, 'q');
+    },
+    [status, mode, completeMove]
+  );
+
+  const resolvePromotion = useCallback(
+    (promotionPiece) => {
+      if (!pendingPromotion) return;
+      const { sourceSquare, targetSquare } = pendingPromotion;
+      setPendingPromotion(null);
+      completeMove(sourceSquare, targetSquare, promotionPiece);
+    },
+    [pendingPromotion, completeMove]
+  );
+
+  const cancelPromotion = useCallback(() => setPendingPromotion(null), []);
+
+  const undoLastMove = useCallback(() => {
+    if (status !== 'player-turn') return;
+    const chess = chessRef.current;
+    if (!chess.history().length) return;
+    chess.undo();
+    chess.undo();
+    syncFromChess();
+    setGameOverMessage(null);
+    setStatus('player-turn');
+  }, [status, syncFromChess]);
 
   const retryAfterMistake = useCallback(() => {
     setMistake(null);
@@ -291,8 +467,10 @@ export function useChessGame(initialMode = 'coached') {
   }, []);
 
   const resetGame = useCallback(
-    (newMode, newColor) => {
-      chessRef.current = new Chess();
+    (newMode, newColor, newFen) => {
+      clearActiveGame(modeRef.current);
+      setWasResumed(false);
+      chessRef.current = newFen ? new Chess(newFen) : new Chess();
       modeRef.current = newMode ?? modeRef.current;
       setModeState(modeRef.current);
       if (newColor) {
@@ -305,12 +483,15 @@ export function useChessGame(initialMode = 'coached') {
       setGameOverMessage(null);
       setReviewData(null);
       setReviewProgress(null);
+      setWhiteTimeMs(timeControlRef.current?.initialMs ?? null);
+      setBlackTimeMs(timeControlRef.current?.initialMs ?? null);
       syncFromChess();
       setStatus('loading');
 
       (async () => {
-        if (studentColorRef.current === 'b') {
-          // Computer plays White's opening move before the student gets a turn.
+        if (chessRef.current.turn() !== studentColorRef.current) {
+          // Whoever isn't the student moves first (either a fresh game where the
+          // student plays Black, or a custom starting position like an endgame drill).
           setStatus('computer-thinking');
           await playComputerReply(null);
           return;
@@ -321,6 +502,7 @@ export function useChessGame(initialMode = 'coached') {
           });
           baselineRef.current = { evalCp: baseline.evalCp, bestMoveUci: baseline.bestMoveUci };
           setCurrentEvalCp(baseline.evalCp);
+          setBestMoveUci(baseline.bestMoveUci);
         } else {
           setCurrentEvalCp(0);
         }
@@ -363,7 +545,11 @@ export function useChessGame(initialMode = 'coached') {
   return {
     fen,
     moveHistory,
+    plyFens,
     lastMove,
+    checkSquare,
+    materialBalance,
+    pendingPromotion,
     status,
     mode,
     setMode,
@@ -372,11 +558,21 @@ export function useChessGame(initialMode = 'coached') {
     difficultyElo,
     setDifficultyElo,
     currentEvalCp,
+    bestMoveUci,
+    timeControl,
+    setTimeControl,
+    whiteTimeMs,
+    blackTimeMs,
+    wasResumed,
+    dismissResumeNotice: () => setWasResumed(false),
     mistake,
     gameOverMessage,
     reviewData,
     reviewProgress,
     handlePieceDrop,
+    resolvePromotion,
+    cancelPromotion,
+    undoLastMove,
     retryAfterMistake,
     resetGame,
     requestGameReview,

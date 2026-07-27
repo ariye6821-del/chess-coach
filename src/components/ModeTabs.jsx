@@ -1,7 +1,12 @@
 const TABS = [
+  { key: 'daily', label: '🗓️ חידת היום' },
   { key: 'coached', label: 'עם מאמן' },
   { key: 'free', label: 'משחק חופשי' },
-  { key: 'import', label: 'ייבוא מ-Chess.com' },
+  { key: 'friend', label: '🧑‍🤝‍🧑 מול חבר' },
+  { key: 'endgames', label: '🏁 סיומים' },
+  { key: 'rating', label: '📈 דירוג' },
+  { key: 'achievements', label: '🎖️ הישגים' },
+  { key: 'import', label: 'ייבוא משחקים' },
   { key: 'puzzles', label: '🧩 תרגילים' },
 ];
 

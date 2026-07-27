@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { StockfishEngine } from '../lib/stockfishEngine';
 import { fetchRecentGames, pgnToSanMoves, describeGame } from '../lib/chesscom';
+import { fetchLichessGames, describeLichessGame } from '../lib/lichess';
 import { analyzeGameFromMoves, summarizeGame, movePhase } from '../lib/gameAnalysis';
 import { getWeaknessSummary } from '../lib/coachApi';
 import { addPuzzlesFromRecords } from '../lib/puzzleBank';
 import { nearestEloTier } from '../lib/difficulty';
 import { GameReviewScreen } from './GameReviewScreen';
 import { WeaknessProfile } from './WeaknessProfile';
+import { PlayerColorSelector } from './PlayerColorSelector';
 
 const SINGLE_GAME_DEPTH = 11;
 const BULK_DEPTH = 8;
@@ -49,6 +51,7 @@ function emptyAggregate() {
 export function ChessComImport() {
   const engineRef = useRef(null);
   const [engineReady, setEngineReady] = useState(false);
+  const [source, setSource] = useState('chesscom');
   const [username, setUsername] = useState(loadSavedUsername);
   const [loadingGames, setLoadingGames] = useState(false);
   const [error, setError] = useState(null);
@@ -57,6 +60,8 @@ export function ChessComImport() {
   const [singleReview, setSingleReview] = useState(null);
   const [profile, setProfile] = useState(null);
   const [profileProgress, setProfileProgress] = useState(null);
+  const [pastedPgn, setPastedPgn] = useState('');
+  const [pastedColor, setPastedColor] = useState('w');
 
   useEffect(() => {
     const engine = new StockfishEngine();
@@ -72,13 +77,33 @@ export function ChessComImport() {
     setError(null);
     setGames([]);
     try {
-      const raw = await fetchRecentGames(username, 20);
-      if (!raw.length) setError('לא נמצאו משחקים עבור המשתמש הזה.');
-      setGames(raw.map((g) => describeGame(g, username)));
+      if (source === 'lichess') {
+        const rawPgns = await fetchLichessGames(username, 20);
+        if (!rawPgns.length) setError('לא נמצאו משחקים עבור המשתמש הזה.');
+        setGames(rawPgns.map((pgn) => describeLichessGame(pgn, username)));
+      } else {
+        const raw = await fetchRecentGames(username, 20);
+        if (!raw.length) setError('לא נמצאו משחקים עבור המשתמש הזה.');
+        setGames(raw.map((g) => describeGame(g, username)));
+      }
     } catch (err) {
       setError(err.message);
     } finally {
       setLoadingGames(false);
+    }
+  };
+
+  const analyzePastedPgn = async () => {
+    setError(null);
+    try {
+      const sanMoves = pgnToSanMoves(pastedPgn);
+      if (!sanMoves.length) throw new Error('לא נמצאו מהלכים תקינים ב-PGN שהודבק.');
+      const records = await analyzeGameFromMoves(engineRef.current, sanMoves, { depth: SINGLE_GAME_DEPTH });
+      const summary = summarizeGame(records, { color: pastedColor });
+      addPuzzlesFromRecords(records, pastedColor, 'pgn-paste', null);
+      setSingleReview({ records, summary, studentColor: pastedColor, title: 'משחק מודבק', playerElo: null });
+    } catch (err) {
+      setError('שגיאה בניתוח ה-PGN: ' + err.message);
     }
   };
 
@@ -90,7 +115,7 @@ export function ChessComImport() {
       const records = await analyzeGameFromMoves(engineRef.current, sanMoves, { depth: SINGLE_GAME_DEPTH });
       const summary = summarizeGame(records, { color: game.studentColor });
       const playerElo = nearestEloTier(studentRating(game));
-      addPuzzlesFromRecords(records, game.studentColor, 'chesscom', playerElo);
+      addPuzzlesFromRecords(records, game.studentColor, source, playerElo);
       setSingleReview({
         records,
         summary,
@@ -125,7 +150,7 @@ export function ChessComImport() {
         }
         aggregate.totalMoves += summary.totalMoves;
         aggregate.totalCpLoss += summary.avgCpLoss * summary.totalMoves;
-        addPuzzlesFromRecords(records, game.studentColor, 'chesscom', nearestEloTier(studentRating(game)));
+        addPuzzlesFromRecords(records, game.studentColor, source, nearestEloTier(studentRating(game)));
 
         for (const rec of records) {
           if (rec.mover !== game.studentColor) continue;
@@ -179,12 +204,26 @@ export function ChessComImport() {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-4">
-        <h2 className="mb-2 text-lg font-bold text-slate-100">ייבוא משחקים מ-Chess.com</h2>
+        <h2 className="mb-2 text-lg font-bold text-slate-100">ייבוא משחקים</h2>
+        <div className="mb-3 flex gap-2">
+          <button
+            onClick={() => setSource('chesscom')}
+            className={`min-h-9 flex-1 rounded-md px-3 py-1.5 text-sm font-bold ${source === 'chesscom' ? 'bg-sky-600 text-white' : 'bg-slate-800 text-slate-300'}`}
+          >
+            Chess.com
+          </button>
+          <button
+            onClick={() => setSource('lichess')}
+            className={`min-h-9 flex-1 rounded-md px-3 py-1.5 text-sm font-bold ${source === 'lichess' ? 'bg-sky-600 text-white' : 'bg-slate-800 text-slate-300'}`}
+          >
+            Lichess
+          </button>
+        </div>
         <div className="flex gap-2">
           <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="שם משתמש ב-Chess.com"
+            placeholder={source === 'lichess' ? 'שם משתמש ב-Lichess' : 'שם משתמש ב-Chess.com'}
             className="min-h-11 flex-1 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-slate-100"
             onKeyDown={(e) => e.key === 'Enter' && loadGames()}
           />
@@ -198,6 +237,27 @@ export function ChessComImport() {
         </div>
         {!engineReady && <p className="mt-2 text-xs text-slate-500">טוען מנוע ניתוח...</p>}
         {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
+      </div>
+
+      <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-4">
+        <h3 className="mb-2 text-sm font-bold text-slate-300">או הדביקו PGN של משחק</h3>
+        <textarea
+          value={pastedPgn}
+          onChange={(e) => setPastedPgn(e.target.value)}
+          placeholder="הדביקו כאן טקסט PGN..."
+          rows={4}
+          className="w-full rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+        />
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <PlayerColorSelector value={pastedColor} onChange={setPastedColor} />
+          <button
+            onClick={analyzePastedPgn}
+            disabled={!pastedPgn.trim() || !engineReady}
+            className="min-h-11 rounded-md bg-emerald-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+          >
+            נתח משחק מודבק
+          </button>
+        </div>
       </div>
 
       {games.length > 0 && (
