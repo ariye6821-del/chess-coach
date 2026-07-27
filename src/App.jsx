@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { Capacitor } from '@capacitor/core';
 import { Chessboard } from 'react-chessboard';
 import { useChessGame } from './hooks/useChessGame';
 import { useClickToMove } from './hooks/useClickToMove';
@@ -454,7 +453,6 @@ function PlayScreen({ mode }) {
 function App() {
   const [mode, setMode] = useState('coached');
   const [showOnboarding, setShowOnboarding] = useState(() => !hasOnboarded());
-  const isNative = Capacitor.isNativePlatform();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 to-slate-900 px-3 py-4 sm:px-4 sm:py-6" dir="rtl">
@@ -486,15 +484,6 @@ function App() {
               <BoardThemeSelector />
             </div>
           </div>
-          {!isNative && (
-            <a
-              href="/downloads/chess-coach.apk"
-              download
-              className="mt-3 inline-flex min-h-11 max-w-full items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-emerald-950/40 transition hover:from-emerald-500 hover:to-teal-500 sm:text-sm"
-            >
-              <span className="truncate">📱 הורידו את האפליקציה לאנדרואיד (APK)</span>
-            </a>
-          )}
         </header>
 
         <div className="mb-4">
