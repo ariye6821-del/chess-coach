@@ -83,7 +83,7 @@ function StatusBadge({ status }) {
   return <span className={`rounded-full px-3 py-1 text-xs font-bold ${item.color}`}>{item.text}</span>;
 }
 
-function FreePlayPanel({ status, gameOverMessage, hasMoves, onReview, onNewGame, onUndo, mode }) {
+function FreePlayPanel({ status, gameOverMessage, hasMoves, canUndo, onReview, onNewGame, onUndo, mode }) {
   const isFriend = mode === 'friend';
   return (
     <aside className="flex h-full min-h-[420px] w-full flex-col rounded-xl border border-slate-700 bg-slate-900/80 p-4 shadow-lg">
@@ -113,7 +113,7 @@ function FreePlayPanel({ status, gameOverMessage, hasMoves, onReview, onNewGame,
           </div>
         )}
 
-        {hasMoves && status === 'player-turn' && (
+        {canUndo && status === 'player-turn' && (
           <button
             onClick={onUndo}
             className="w-full rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800"
@@ -376,6 +376,7 @@ function PlayScreen({ mode }) {
             status={status}
             gameOverMessage={gameOverMessage}
             hasMoves={moveHistory.length > 0}
+            canUndo={mode === 'friend' ? moveHistory.length > 0 : moveHistory.length >= 2}
             onReview={requestGameReview}
             onNewGame={() => resetGame(mode)}
             onUndo={undoLastMove}

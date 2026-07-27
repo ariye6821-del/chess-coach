@@ -13,19 +13,22 @@ import { PlayerColorSelector } from './PlayerColorSelector';
 const SINGLE_GAME_DEPTH = 11;
 const BULK_DEPTH = 8;
 const BULK_GAME_LIMIT = 8;
-const USERNAME_STORAGE_KEY = 'chess-coach-chesscom-username';
+const USERNAME_STORAGE_KEYS = {
+  chesscom: 'chess-coach-chesscom-username',
+  lichess: 'chess-coach-lichess-username',
+};
 
-function loadSavedUsername() {
+function loadSavedUsername(source) {
   try {
-    return localStorage.getItem(USERNAME_STORAGE_KEY) || '';
+    return localStorage.getItem(USERNAME_STORAGE_KEYS[source]) || '';
   } catch {
     return '';
   }
 }
 
-function saveUsername(username) {
+function saveUsername(source, username) {
   try {
-    localStorage.setItem(USERNAME_STORAGE_KEY, username);
+    localStorage.setItem(USERNAME_STORAGE_KEYS[source], username);
   } catch {
     // localStorage unavailable (private browsing, quota, etc.) - just won't persist
   }
@@ -52,7 +55,7 @@ export function ChessComImport() {
   const engineRef = useRef(null);
   const [engineReady, setEngineReady] = useState(false);
   const [source, setSource] = useState('chesscom');
-  const [username, setUsername] = useState(loadSavedUsername);
+  const [username, setUsername] = useState(() => loadSavedUsername('chesscom'));
   const [loadingGames, setLoadingGames] = useState(false);
   const [error, setError] = useState(null);
   const [games, setGames] = useState([]);
@@ -72,7 +75,7 @@ export function ChessComImport() {
 
   const loadGames = async () => {
     if (!username.trim()) return;
-    saveUsername(username.trim());
+    saveUsername(source, username.trim());
     setLoadingGames(true);
     setError(null);
     setGames([]);
@@ -207,13 +210,19 @@ export function ChessComImport() {
         <h2 className="mb-2 text-lg font-bold text-slate-100">ייבוא משחקים</h2>
         <div className="mb-3 flex gap-2">
           <button
-            onClick={() => setSource('chesscom')}
+            onClick={() => {
+              setSource('chesscom');
+              setUsername(loadSavedUsername('chesscom'));
+            }}
             className={`min-h-9 flex-1 rounded-md px-3 py-1.5 text-sm font-bold ${source === 'chesscom' ? 'bg-sky-600 text-white' : 'bg-slate-800 text-slate-300'}`}
           >
             Chess.com
           </button>
           <button
-            onClick={() => setSource('lichess')}
+            onClick={() => {
+              setSource('lichess');
+              setUsername(loadSavedUsername('lichess'));
+            }}
             className={`min-h-9 flex-1 rounded-md px-3 py-1.5 text-sm font-bold ${source === 'lichess' ? 'bg-sky-600 text-white' : 'bg-slate-800 text-slate-300'}`}
           >
             Lichess

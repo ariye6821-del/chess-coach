@@ -158,7 +158,7 @@ function EndgameLessonPlay({ lesson, onExit }) {
       )}
 
       <div className="flex w-full gap-2">
-        {moveHistory.length > 0 && status === 'player-turn' && (
+        {moveHistory.length >= 2 && status === 'player-turn' && (
           <button
             onClick={undoLastMove}
             className="flex-1 rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 transition hover:bg-slate-800"

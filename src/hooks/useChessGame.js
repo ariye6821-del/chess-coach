@@ -87,6 +87,10 @@ export function useChessGame(initialMode = 'coached', initialOptions = {}) {
   const difficultyRef = useRef(initialDifficultyElo ?? null); // null = max strength
   const modeRef = useRef(initialMode);
   const studentColorRef = useRef(initialStudentColor ?? 'w');
+  // A custom starting position (e.g. a specific endgame lesson) needs its own
+  // save slot - otherwise every position sharing the same mode (all endgame
+  // drills use mode 'endgame') would clobber each other's in-progress save.
+  const saveKeyRef = useRef(initialFen ? `${initialMode}::${initialFen}` : initialMode);
 
   const [fen, setFen] = useState(chessRef.current.fen());
   const [moveHistory, setMoveHistory] = useState([]);
@@ -117,7 +121,7 @@ export function useChessGame(initialMode = 'coached', initialOptions = {}) {
     analysisEngineRef.current = analysisEngine;
     opponentEngineRef.current = opponentEngine;
 
-    const saved = loadActiveGame(initialMode);
+    const saved = loadActiveGame(saveKeyRef.current);
     if (saved?.pgn) {
       try {
         const restored = new Chess();
@@ -156,13 +160,13 @@ export function useChessGame(initialMode = 'coached', initialOptions = {}) {
   // can be resumed after closing the tab/app; cleared once the game ends or resets.
   useEffect(() => {
     if (status === 'player-turn' && chessRef.current.history().length) {
-      saveActiveGame(modeRef.current, {
+      saveActiveGame(saveKeyRef.current, {
         pgn: chessRef.current.pgn(),
         studentColor: studentColorRef.current,
         difficultyElo: difficultyRef.current,
       });
     } else if (status === 'game-over') {
-      clearActiveGame(modeRef.current);
+      clearActiveGame(saveKeyRef.current);
     }
   }, [status, fen]);
 
@@ -453,13 +457,25 @@ export function useChessGame(initialMode = 'coached', initialOptions = {}) {
   const undoLastMove = useCallback(() => {
     if (status !== 'player-turn') return;
     const chess = chessRef.current;
-    if (!chess.history().length) return;
-    chess.undo();
-    chess.undo();
+    const historyLength = chess.history().length;
+    if (mode === 'friend') {
+      // Pass-and-play: every ply is a real decision by whoever is at the board,
+      // so undo just the single last move.
+      if (!historyLength) return;
+      chess.undo();
+    } else {
+      // Undo the student's move together with the engine's reply. If the student
+      // plays Black, the engine's un-replied opening move sits alone in history
+      // (length 1) - there's nothing of the student's to undo yet, so bail out
+      // rather than undoing past it and leaving the game with no one to move.
+      if (historyLength < 2) return;
+      chess.undo();
+      chess.undo();
+    }
     syncFromChess();
     setGameOverMessage(null);
     setStatus('player-turn');
-  }, [status, syncFromChess]);
+  }, [status, mode, syncFromChess]);
 
   const retryAfterMistake = useCallback(() => {
     setMistake(null);
@@ -468,7 +484,7 @@ export function useChessGame(initialMode = 'coached', initialOptions = {}) {
 
   const resetGame = useCallback(
     (newMode, newColor, newFen) => {
-      clearActiveGame(modeRef.current);
+      clearActiveGame(saveKeyRef.current);
       setWasResumed(false);
       chessRef.current = newFen ? new Chess(newFen) : new Chess();
       modeRef.current = newMode ?? modeRef.current;
