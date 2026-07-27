@@ -95,7 +95,7 @@ function StatusBadge({ status }) {
 function FreePlayPanel({ status, gameOverMessage, hasMoves, canUndo, onReview, onNewGame, onUndo, onResign, onOfferDraw, mode }) {
   const isFriend = mode === 'friend';
   return (
-    <aside className="flex h-full min-h-[420px] w-full flex-col rounded-xl border border-slate-700 bg-slate-900/80 p-4 shadow-lg">
+    <aside className="flex h-full min-h-[420px] w-full flex-col rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-sm ring-1 ring-white/5 p-4 shadow-lg">
       <div className="mb-3 flex items-center gap-2 border-b border-slate-700 pb-3">
         <span className="text-2xl">{isFriend ? '🧑‍🤝‍🧑' : '🎯'}</span>
         <h2 className="text-lg font-bold text-slate-100">{isFriend ? 'מול חבר' : 'משחק חופשי'}</h2>
@@ -153,7 +153,7 @@ function FreePlayPanel({ status, gameOverMessage, hasMoves, canUndo, onReview, o
         {hasMoves && status !== 'reviewing' && (
           <button
             onClick={onReview}
-            className="w-full rounded-lg bg-sky-600 px-4 py-2 font-bold text-white transition hover:bg-sky-500"
+            className="w-full rounded-lg bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-2 font-bold text-white transition hover:from-sky-400 hover:to-indigo-400"
           >
             סיים משחק וקבל סקירה
           </button>
@@ -466,15 +466,28 @@ function App() {
         />
       )}
       <div className="mx-auto max-w-6xl">
-        <header className="mb-4 text-center sm:mb-6">
-          <h1 className="text-2xl font-extrabold text-slate-100 sm:text-3xl lg:text-4xl">מאמן השחמט שלי</h1>
-          <p className="mt-1 text-sm text-slate-400 sm:text-base">
-            שפרו את דירוג האלו שלכם באמצעות ניתוח טעויות בזמן אמת
-          </p>
+        <header className="mb-4 sm:mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 text-2xl shadow-lg shadow-sky-900/40 sm:h-12 sm:w-12">
+                ♞
+              </span>
+              <div>
+                <h1 className="text-xl font-extrabold leading-tight text-slate-100 sm:text-2xl lg:text-3xl">
+                  מאמן השחמט שלי
+                </h1>
+                <p className="text-xs text-slate-400 sm:text-sm">שפרו את דירוג האלו שלכם בזמן אמת</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <SoundToggle />
+              <BoardThemeSelector />
+            </div>
+          </div>
           <a
             href="/downloads/chess-coach.apk"
             download
-            className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-500"
+            className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-sm font-bold text-white shadow-md shadow-emerald-950/40 transition hover:from-emerald-500 hover:to-teal-500"
           >
             📱 הורידו את האפליקציה לאנדרואיד (APK)
           </a>
@@ -484,40 +497,37 @@ function App() {
           <GoogleAd slot={ADSENSE_SLOT_BANNER} className="min-h-[50px] sm:min-h-[90px]" />
         </div>
 
-        <div className="mb-3 flex justify-end gap-2">
-          <SoundToggle />
-          <BoardThemeSelector />
-        </div>
-
         <ModeTabs active={mode} onChange={setMode} />
 
-        {mode === 'daily' ? (
-          <DailyChallenge key="daily" />
-        ) : mode === 'import' ? (
-          <ChessComImport />
-        ) : mode === 'puzzles' ? (
-          <PuzzleTrainer key="puzzles" />
-        ) : mode === 'rush' ? (
-          <PuzzleRush key="rush" />
-        ) : mode === 'backup' ? (
-          <BackupScreen key="backup" />
-        ) : mode === 'analysis' ? (
-          <PositionAnalysis key="analysis" />
-        ) : mode === 'online' ? (
-          <OnlineMultiplayer key="online" />
-        ) : mode === 'endgames' ? (
-          <EndgameTrainer key="endgames" />
-        ) : mode === 'repertoire' ? (
-          <RepertoireTrainer key="repertoire" />
-        ) : mode === 'rating' ? (
-          <RatingTracker key="rating" />
-        ) : mode === 'achievements' ? (
-          <Achievements key="achievements" />
-        ) : mode === 'plan' ? (
-          <TrainingPlanScreen key="plan" onNavigate={setMode} />
-        ) : (
-          <PlayScreen key={mode} mode={mode} />
-        )}
+        <div key={mode} className="animate-fade-in-up">
+          {mode === 'daily' ? (
+            <DailyChallenge key="daily" />
+          ) : mode === 'import' ? (
+            <ChessComImport />
+          ) : mode === 'puzzles' ? (
+            <PuzzleTrainer key="puzzles" />
+          ) : mode === 'rush' ? (
+            <PuzzleRush key="rush" />
+          ) : mode === 'backup' ? (
+            <BackupScreen key="backup" />
+          ) : mode === 'analysis' ? (
+            <PositionAnalysis key="analysis" />
+          ) : mode === 'online' ? (
+            <OnlineMultiplayer key="online" />
+          ) : mode === 'endgames' ? (
+            <EndgameTrainer key="endgames" />
+          ) : mode === 'repertoire' ? (
+            <RepertoireTrainer key="repertoire" />
+          ) : mode === 'rating' ? (
+            <RatingTracker key="rating" />
+          ) : mode === 'achievements' ? (
+            <Achievements key="achievements" />
+          ) : mode === 'plan' ? (
+            <TrainingPlanScreen key="plan" onNavigate={setMode} />
+          ) : (
+            <PlayScreen key={mode} mode={mode} />
+          )}
+        </div>
       </div>
     </div>
   );

@@ -160,7 +160,7 @@ export function WeaknessProfile({ profile, onClose }) {
         </button>
       </div>
 
-      <div className="min-h-[420px] rounded-xl border border-slate-700 bg-slate-900/80 p-6">{slides[slideIndex].render()}</div>
+      <div className="min-h-[420px] rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-sm ring-1 ring-white/5 p-6">{slides[slideIndex].render()}</div>
 
       <div className="flex items-center justify-between gap-3">
         <button
@@ -185,7 +185,7 @@ export function WeaknessProfile({ profile, onClose }) {
         <button
           onClick={() => goTo(slideIndex + 1)}
           disabled={slideIndex === total - 1}
-          className="min-h-11 rounded-md bg-sky-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-30"
+          className="min-h-11 rounded-md bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-2 text-sm font-bold text-white disabled:opacity-30"
         >
           הבא ▶
         </button>

@@ -43,18 +43,18 @@ export function BackupScreen() {
         </p>
       </div>
 
-      <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-4">
+      <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-sm ring-1 ring-white/5 p-4">
         <h3 className="mb-2 text-sm font-bold text-slate-300">⬇️ הורדת גיבוי</h3>
         <p className="mb-3 text-sm text-slate-400">מוריד קובץ JSON עם כל הנתונים שלכם באפליקציה.</p>
         <button
           onClick={downloadBackup}
-          className="w-full rounded-lg bg-sky-600 px-4 py-2 font-bold text-white transition hover:bg-sky-500"
+          className="w-full rounded-lg bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-2 font-bold text-white transition hover:from-sky-400 hover:to-indigo-400"
         >
           הורידו קובץ גיבוי
         </button>
       </div>
 
-      <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-4">
+      <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-sm ring-1 ring-white/5 p-4">
         <h3 className="mb-2 text-sm font-bold text-slate-300">⬆️ שחזור מגיבוי</h3>
         <p className="mb-3 text-sm text-amber-400">
           ⚠️ שחזור יחליף את כל הנתונים הקיימים באפליקציה הזו בנתונים מהקובץ המגובה.

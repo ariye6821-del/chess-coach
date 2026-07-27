@@ -31,7 +31,7 @@ export function CoachPanel({
 }) {
   const persona = getPersonaForElo(playerElo);
   return (
-    <aside className="flex h-full min-h-[420px] w-full flex-col rounded-xl border border-slate-700 bg-slate-900/80 p-4 shadow-lg">
+    <aside className="flex h-full min-h-[420px] w-full flex-col rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-sm ring-1 ring-white/5 p-4 shadow-lg">
       <div className="mb-3 flex items-center gap-2 border-b border-slate-700 pb-3">
         <span className="text-2xl">{persona.avatar}</span>
         <div>
@@ -50,7 +50,7 @@ export function CoachPanel({
             {hasMoves && onRequestReview && (
               <button
                 onClick={onRequestReview}
-                className="w-full rounded-lg bg-sky-600 px-4 py-2 font-bold text-white transition hover:bg-sky-500"
+                className="w-full rounded-lg bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-2 font-bold text-white transition hover:from-sky-400 hover:to-indigo-400"
               >
                 📋 קבלו סיכום מ{persona.name}
               </button>

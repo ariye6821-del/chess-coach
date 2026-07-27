@@ -191,7 +191,7 @@ export function PuzzleTrainer() {
 
   if (!queue.length) {
     return (
-      <div className="mx-auto max-w-2xl rounded-xl border border-slate-700 bg-slate-900/80 p-6 text-center">
+      <div className="mx-auto max-w-2xl rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-sm ring-1 ring-white/5 p-6 text-center">
         <h2 className="mb-2 text-xl font-bold text-slate-100">🧩 תרגילים אישיים</h2>
         <p className="text-slate-400">
           עדיין אין לכם תרגילים. שחקו משחק (במצב "עם מאמן" או "משחק חופשי"), או ייבאו וסקרו משחקים מ-Chess.com - המאמן
@@ -204,7 +204,7 @@ export function PuzzleTrainer() {
 
   if (!puzzle) {
     return (
-      <div className="mx-auto max-w-2xl rounded-xl border border-slate-700 bg-slate-900/80 p-6 text-center">
+      <div className="mx-auto max-w-2xl rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-sm ring-1 ring-white/5 p-6 text-center">
         <h2 className="mb-2 text-xl font-bold text-slate-100">🧩 תרגילים אישיים</h2>
         <div className="mb-3 flex justify-center gap-2">
           {tierFilterSelect}
@@ -295,7 +295,7 @@ export function PuzzleTrainer() {
               <button
                 onClick={goNext}
                 disabled={index >= filteredQueue.length - 1}
-                className="min-h-11 rounded-md bg-sky-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-40"
+                className="min-h-11 rounded-md bg-gradient-to-r from-sky-500 to-indigo-500 px-3 py-2 text-sm font-bold text-white disabled:opacity-40"
               >
                 תרגיל הבא ▶
               </button>

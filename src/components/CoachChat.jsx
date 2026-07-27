@@ -85,7 +85,7 @@ export function CoachChat({ fen, moveHistorySan, studentColor, playerElo, person
             <button
               onClick={sendQuestion}
               disabled={loading || !input.trim()}
-              className="rounded-md bg-sky-600 px-3 py-2 text-sm font-bold text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md bg-gradient-to-r from-sky-500 to-indigo-500 px-3 py-2 text-sm font-bold text-white transition hover:from-sky-400 hover:to-indigo-400 disabled:cursor-not-allowed disabled:opacity-50"
             >
               שלח
             </button>

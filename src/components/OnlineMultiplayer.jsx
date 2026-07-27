@@ -181,7 +181,7 @@ export function OnlineMultiplayer() {
         </div>
         <button
           onClick={createRoom}
-          className="w-full rounded-lg bg-sky-600 px-4 py-3 font-bold text-white transition hover:bg-sky-500"
+          className="w-full rounded-lg bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-3 font-bold text-white transition hover:from-sky-400 hover:to-indigo-400"
         >
           🆕 צרו חדר חדש
         </button>

@@ -107,7 +107,7 @@ export function PunishingLinePreview({ punishingLine, onPreviewFen, persona }) {
         </button>
         <button
           onClick={() => setPlaying((p) => !p)}
-          className="min-h-11 rounded-md bg-sky-600 px-2 py-2 text-xs font-bold text-white sm:text-sm"
+          className="min-h-11 rounded-md bg-gradient-to-r from-sky-500 to-indigo-500 px-2 py-2 text-xs font-bold text-white sm:text-sm"
         >
           {playing ? '⏸ עצור' : '▶ הפעל'}
         </button>

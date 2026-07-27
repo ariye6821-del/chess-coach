@@ -206,7 +206,7 @@ export function ChessComImport() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-4">
+      <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-sm ring-1 ring-white/5 p-4">
         <h2 className="mb-2 text-lg font-bold text-slate-100">ייבוא משחקים</h2>
         <div className="mb-3 flex gap-2">
           <button
@@ -239,7 +239,7 @@ export function ChessComImport() {
           <button
             onClick={loadGames}
             disabled={loadingGames || !engineReady}
-            className="min-h-11 rounded-md bg-sky-600 px-4 py-2 font-bold text-white disabled:opacity-50"
+            className="min-h-11 rounded-md bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-2 font-bold text-white disabled:opacity-50"
           >
             {loadingGames ? 'טוען...' : 'טען משחקים'}
           </button>
@@ -248,7 +248,7 @@ export function ChessComImport() {
         {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
       </div>
 
-      <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-4">
+      <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-sm ring-1 ring-white/5 p-4">
         <h3 className="mb-2 text-sm font-bold text-slate-300">או הדביקו PGN של משחק</h3>
         <textarea
           value={pastedPgn}
@@ -270,7 +270,7 @@ export function ChessComImport() {
       </div>
 
       {games.length > 0 && (
-        <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-4">
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-sm ring-1 ring-white/5 p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-sm font-bold text-slate-300">{games.length} משחקים אחרונים</h3>
             <button

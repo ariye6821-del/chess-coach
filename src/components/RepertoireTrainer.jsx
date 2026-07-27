@@ -35,7 +35,7 @@ export function RepertoireTrainer() {
                   <button
                     key={line.id}
                     onClick={() => setActiveLine(line)}
-                    className="flex flex-col items-start gap-1 rounded-xl border border-slate-700 bg-slate-900/80 p-4 text-right shadow-lg transition hover:border-sky-600 hover:bg-slate-800"
+                    className="flex flex-col items-start gap-1 rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-sm ring-1 ring-white/5 p-4 text-right shadow-lg transition hover:border-sky-600 hover:bg-slate-800"
                   >
                     <div className="flex w-full items-center justify-between">
                       <span className="font-bold text-slate-100">{line.name}</span>
@@ -199,7 +199,7 @@ function LineDrill({ line, onExit }) {
           </p>
           <button
             onClick={continueAfterReveal}
-            className="w-full rounded-lg bg-sky-600 px-4 py-2 font-bold text-white transition hover:bg-sky-500"
+            className="w-full rounded-lg bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-2 font-bold text-white transition hover:from-sky-400 hover:to-indigo-400"
           >
             המשיכו
           </button>
@@ -225,7 +225,7 @@ function LineDrill({ line, onExit }) {
         )}
         <button
           onClick={restart}
-          className="flex-1 rounded-lg bg-sky-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-sky-500"
+          className="flex-1 rounded-lg bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-2 text-sm font-bold text-white transition hover:from-sky-400 hover:to-indigo-400"
         >
           🔄 התחילו מחדש
         </button>

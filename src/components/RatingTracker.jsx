@@ -67,7 +67,7 @@ export function RatingTracker() {
         </p>
       </div>
 
-      <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-4 text-center shadow-lg">
+      <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-sm ring-1 ring-white/5 p-4 text-center shadow-lg">
         <p className="text-4xl font-extrabold text-sky-400">{currentRating}</p>
         <p className="mt-1 text-sm text-slate-400">דירוג נוכחי</p>
       </div>
@@ -90,7 +90,7 @@ export function RatingTracker() {
       <RatingChart history={history} />
 
       {history.length > 0 && (
-        <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-4 shadow-lg">
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-sm ring-1 ring-white/5 p-4 shadow-lg">
           <h3 className="mb-2 text-sm font-bold text-slate-300">היסטוריית משחקים אחרונים</h3>
           <ul className="max-h-64 space-y-1 overflow-y-auto text-sm">
             {[...history].reverse().map((h, i) => (

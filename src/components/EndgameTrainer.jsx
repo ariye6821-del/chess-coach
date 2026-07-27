@@ -40,7 +40,7 @@ export function EndgameTrainer() {
             <button
               key={lesson.id}
               onClick={() => setActiveLesson(lesson)}
-              className="flex flex-col items-start gap-2 rounded-xl border border-slate-700 bg-slate-900/80 p-4 text-right shadow-lg transition hover:border-sky-600 hover:bg-slate-800"
+              className="flex flex-col items-start gap-2 rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-sm ring-1 ring-white/5 p-4 text-right shadow-lg transition hover:border-sky-600 hover:bg-slate-800"
             >
               <span className="text-2xl">{lesson.icon}</span>
               <span className="font-bold text-slate-100">{lesson.name}</span>
@@ -174,7 +174,7 @@ function EndgameLessonPlay({ lesson, onExit }) {
         )}
         <button
           onClick={tryAgain}
-          className="flex-1 rounded-lg bg-sky-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-sky-500"
+          className="flex-1 rounded-lg bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-2 text-sm font-bold text-white transition hover:from-sky-400 hover:to-indigo-400"
         >
           🔄 נסו שוב מההתחלה
         </button>

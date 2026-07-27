@@ -133,7 +133,7 @@ export function PuzzleRush() {
         <p className="text-sm text-slate-400">
           פתרו כמה שיותר תרגילים ב-3 דקות. 3 טעויות מסיימות את הריצה מוקדם. משך הזמן חשוב - חשבו מהר!
         </p>
-        <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-4">
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-sm ring-1 ring-white/5 p-4">
           <p className="text-3xl font-extrabold text-sky-400">{bestScore}</p>
           <p className="text-xs text-slate-400">השיא שלכם</p>
         </div>
@@ -146,7 +146,7 @@ export function PuzzleRush() {
             <p className="text-xs text-slate-500">{totalPuzzles} תרגילים זמינים בבנק שלכם</p>
             <button
               onClick={start}
-              className="w-full rounded-lg bg-sky-600 px-4 py-3 text-lg font-bold text-white transition hover:bg-sky-500"
+              className="w-full rounded-lg bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-3 text-lg font-bold text-white transition hover:from-sky-400 hover:to-indigo-400"
             >
               ▶ התחילו ריצה
             </button>
@@ -161,7 +161,7 @@ export function PuzzleRush() {
     return (
       <div dir="rtl" className="mx-auto max-w-2xl space-y-4 text-center">
         <h2 className="text-xl font-bold text-slate-100">⚡ Puzzle Rush - סיום!</h2>
-        <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-6">
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-sm ring-1 ring-white/5 p-6">
           <p className="text-5xl font-extrabold text-sky-400">{score}</p>
           <p className="mt-1 text-sm text-slate-400">תרגילים נפתרו</p>
           {isNewBest && <p className="mt-2 font-bold text-emerald-400">🎉 שיא חדש!</p>}
@@ -178,7 +178,7 @@ export function PuzzleRush() {
         </div>
         <button
           onClick={start}
-          className="w-full rounded-lg bg-sky-600 px-4 py-3 text-lg font-bold text-white transition hover:bg-sky-500"
+          className="w-full rounded-lg bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-3 text-lg font-bold text-white transition hover:from-sky-400 hover:to-indigo-400"
         >
           🔄 ריצה נוספת
         </button>
@@ -188,7 +188,7 @@ export function PuzzleRush() {
 
   return (
     <div dir="rtl" className="mx-auto max-w-2xl space-y-3">
-      <div className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-900/80 px-4 py-2">
+      <div className="flex items-center justify-between rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-sm ring-1 ring-white/5 px-4 py-2">
         <span className="font-mono text-lg font-bold text-slate-100">
           ⏱ {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
         </span>

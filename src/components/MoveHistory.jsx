@@ -7,7 +7,7 @@ export function MoveHistory({ moves, onSelectPly, selectedPly }) {
   const clickable = !!onSelectPly;
 
   return (
-    <div className="w-full rounded-xl border border-slate-700 bg-slate-900/80 p-3">
+    <div className="w-full rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-sm ring-1 ring-white/5 p-3">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-bold text-slate-300">היסטוריית מהלכים</h3>
         {clickable && selectedPly != null && (

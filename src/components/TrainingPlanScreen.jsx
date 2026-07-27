@@ -63,7 +63,7 @@ export function TrainingPlanScreen({ onNavigate, showSkip = false, onSkip, onFin
         <button
           onClick={analyze}
           disabled={loading || !engineReady || !username.trim()}
-          className="min-h-11 rounded-md bg-sky-600 px-4 py-2 font-bold text-white disabled:opacity-50"
+          className="min-h-11 rounded-md bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-2 font-bold text-white disabled:opacity-50"
         >
           {loading ? 'מנתח...' : 'נתח ובנה תוכנית'}
         </button>
@@ -80,7 +80,7 @@ export function TrainingPlanScreen({ onNavigate, showSkip = false, onSkip, onFin
 
       {plan && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-900/80 p-4">
+          <div className="flex items-center justify-between rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-sm ring-1 ring-white/5 p-4">
             <div>
               <p className="text-xs text-slate-500">
                 {plan.username} · {plan.gamesAnalyzed} משחקים נותחו
@@ -95,7 +95,7 @@ export function TrainingPlanScreen({ onNavigate, showSkip = false, onSkip, onFin
             )}
           </div>
 
-          <div className="rounded-xl border border-slate-700 bg-slate-900/80 p-4">
+          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-sm ring-1 ring-white/5 p-4">
             <p className="text-sm text-slate-200">{plan.summary}</p>
             {plan.recommendations?.length > 0 && (
               <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-slate-300">

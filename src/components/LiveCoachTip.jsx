@@ -17,7 +17,7 @@ export function LiveCoachTip({ playerElo, plyCount, fen, studentColor }) {
   const tip = getPositionAwareTip({ fen, studentColor, tier: persona.id, phase, seed });
 
   return (
-    <div className="mb-2 flex w-full max-w-[560px] items-start gap-2 rounded-xl border border-slate-700 bg-slate-900/80 px-3 py-2 shadow-lg">
+    <div className="mb-2 flex w-full max-w-[560px] items-start gap-2 rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-sm ring-1 ring-white/5 px-3 py-2 shadow-lg">
       <span className="text-xl leading-none">{persona.avatar}</span>
       <div>
         <p className="text-xs font-bold text-slate-500">{persona.name} חושב:</p>
