@@ -89,3 +89,40 @@ export async function getWeaknessSummary(stats) {
     return localWeaknessFallback(stats);
   }
 }
+
+function localGameSummaryFallback({ counts, byPhase }) {
+  const totalGood = counts.best + counts.good;
+  const totalBad = counts.mistake + counts.blunder;
+  const worstPhase = Object.entries(byPhase).sort((a, b) => b[1].count - a[1].count)[0];
+  const phaseNames = { opening: 'בפתיחה', middlegame: 'באמצע המשחק', endgame: 'בסיום' };
+  return {
+    overallSummary:
+      totalBad === 0
+        ? 'משחק נקי ויציב - כל הכבוד!'
+        : `משחק עם כמה רגעים טובים וכמה מקומות לשיפור - ${phaseNames[worstPhase[0]]} היה השלב הכי מאתגר.`,
+    strengths: [
+      totalGood > 0 ? `שיחקת ${totalGood} מהלכים טובים או מיטביים.` : 'סיימת את המשחק - זה כבר תרגול חשוב.',
+      'המשכת לשחק עד הסוף בלי לוותר על העמדה.',
+    ],
+    improvements: [
+      totalBad > 0
+        ? `נסה להתמקד ב${phaseNames[worstPhase[0]]} - שם קרו רוב הטעויות הפעם.`
+        : 'המשך לתרגל כדי לשמור על הרמה הגבוהה הזו.',
+      'לפני כל מהלך, בדוק אם יש כלי שלך שנשאר לא מוגן.',
+    ],
+    isFallback: true,
+  };
+}
+
+/**
+ * Requests a Hebrew "what went well / what to improve" recap for a single
+ * just-finished game. See netlify/functions/gameSummary.js for the LLM call.
+ */
+export async function getGameSummary(stats) {
+  try {
+    return await callFunction('gameSummary', stats);
+  } catch (err) {
+    console.error('gameSummary request failed, using local fallback:', err);
+    return localGameSummaryFallback(stats);
+  }
+}

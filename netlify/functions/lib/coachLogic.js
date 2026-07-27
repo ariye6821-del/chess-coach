@@ -281,3 +281,66 @@ export function localWeaknessFallback({ counts, byPhase }) {
     isFallback: true,
   };
 }
+
+/**
+ * Builds a prompt for a post-game summary of a single just-finished game (free-play
+ * or pass-and-play, i.e. without a live coach) - unlike buildWeaknessPrompt (which
+ * hunts for one recurring weakness across many games), this asks explicitly for
+ * both what the student did well AND what to improve, to close out one game on an
+ * encouraging, actionable note.
+ */
+export function buildGameSummaryPrompt({ counts, avgCpLoss, byPhase, sampleMistakes, resultLabel, playerElo }) {
+  const level = levelProfile(playerElo);
+  const samplesText = sampleMistakes?.length
+    ? `\n\nדוגמאות קונקרטיות לטעויות מהמשחק הזה (מהלך, שלב, וסיווג):\n${sampleMistakes
+        .map(
+          (m) =>
+            `- מהלך ${m.moveNumber} (${m.phase}): שיחק ${m.san} (${CLASSIFICATION_LABELS[m.classification] || m.classification})${m.bestMoveSan ? `, במקום ${m.bestMoveSan}` : ''}`
+        )
+        .join('\n')}`
+    : '';
+
+  return `${level.persona.voice}
+
+מי התלמיד: ${level.audienceLabel}.
+איך לדבר אליו: ${level.promptRules}
+
+התלמיד סיים הרגע משחק שחמט (במצב משחק חופשי, בלי הכוונה חיה של מאמן במהלך המשחק). זו ההזדמנות שלך לסכם עבורו את המשחק - לחזק את מה שהוא עשה טוב, ולהצביע בעדינות על מה לשפר בפעם הבאה.
+
+נתוני המשחק (רק המהלכים של התלמיד):
+- מהלכים מיטביים: ${counts.best}, טובים: ${counts.good}, לא מדויקים: ${counts.inaccuracy}, טעויות: ${counts.mistake}, טעויות חמורות: ${counts.blunder}
+- אובדן מאיות ממוצע למהלך: ${Math.round(avgCpLoss)}
+- טעויות לפי שלב משחק: פתיחה=${byPhase.opening.count}, אמצע משחק=${byPhase.middlegame.count}, סיום=${byPhase.endgame.count}
+- תוצאת המשחק: ${resultLabel || 'לא ידועה'}${samplesText}
+
+כתוב בעברית משוב קצר, אישי ומעודד, המבוסס על הנתונים בפועל (לא כללי גנרי). החזר אך ורק אובייקט JSON תקין:
+{
+  "overallSummary": "משפט או שניים שמסכמים את המשחק בטון חם ומעודד",
+  "strengths": ["נקודה טובה קונקרטית 1", "נקודה טובה קונקרטית 2"],
+  "improvements": ["נקודה לשיפור קונקרטית 1", "נקודה לשיפור קונקרטית 2"]
+}`;
+}
+
+export function localGameSummaryFallback({ counts, byPhase }) {
+  const totalGood = counts.best + counts.good;
+  const totalBad = counts.mistake + counts.blunder;
+  const worstPhase = Object.entries(byPhase).sort((a, b) => b[1].count - a[1].count)[0];
+  const phaseNames = { opening: 'בפתיחה', middlegame: 'באמצע המשחק', endgame: 'בסיום' };
+  return {
+    overallSummary:
+      totalBad === 0
+        ? 'משחק נקי ויציב - כל הכבוד!'
+        : `משחק עם כמה רגעים טובים וכמה מקומות לשיפור - ${phaseNames[worstPhase[0]]} היה השלב הכי מאתגר.`,
+    strengths: [
+      totalGood > 0 ? `שיחקת ${totalGood} מהלכים טובים או מיטביים.` : 'סיימת את המשחק - זה כבר תרגול חשוב.',
+      'המשכת לשחק עד הסוף בלי לוותר על העמדה.',
+    ],
+    improvements: [
+      totalBad > 0
+        ? `נסה להתמקד ב${phaseNames[worstPhase[0]]} - שם קרו רוב הטעויות הפעם.`
+        : 'המשך לתרגל כדי לשמור על הרמה הגבוהה הזו.',
+      'לפני כל מהלך, בדוק אם יש כלי שלך שנשאר לא מוגן.',
+    ],
+    isFallback: true,
+  };
+}

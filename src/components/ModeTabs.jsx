@@ -6,6 +6,7 @@ const TABS = [
   { key: 'endgames', label: '🏁 סיומים' },
   { key: 'rating', label: '📈 דירוג' },
   { key: 'achievements', label: '🎖️ הישגים' },
+  { key: 'plan', label: '📋 תוכנית אימונים' },
   { key: 'import', label: 'ייבוא משחקים' },
   { key: 'puzzles', label: '🧩 תרגילים' },
 ];

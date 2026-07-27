@@ -22,6 +22,7 @@ function netlifyFunctionsDevPlugin() {
   const routes = [
     ['/.netlify/functions/analyzeMove', '/netlify/functions/analyzeMove.js'],
     ['/.netlify/functions/weaknessSummary', '/netlify/functions/weaknessSummary.js'],
+    ['/.netlify/functions/gameSummary', '/netlify/functions/gameSummary.js'],
   ];
 
   return {

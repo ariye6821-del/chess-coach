@@ -18,6 +18,10 @@ import { Achievements } from './components/Achievements';
 import { GoogleAd } from './components/GoogleAd';
 import { BoardThemeSelector } from './components/BoardThemeSelector';
 import { SoundToggle } from './components/SoundToggle';
+import { LiveCoachTip } from './components/LiveCoachTip';
+import { TrainingPlanScreen } from './components/TrainingPlanScreen';
+import { Onboarding } from './components/Onboarding';
+import { hasOnboarded } from './lib/trainingPlan';
 import { useBoardTheme } from './hooks/useBoardTheme';
 import { formatEval } from './lib/stockfishEngine';
 import { sanForUci } from './lib/gameAnalysis';
@@ -219,6 +223,7 @@ function PlayScreen({ mode }) {
         onClose={() => resetGame(mode)}
         title="סקירת המשחק שלך"
         playerElo={difficultyElo}
+        resultLabel={gameOverMessage}
       />
     );
   }
@@ -251,6 +256,7 @@ function PlayScreen({ mode }) {
             </button>
           </div>
         )}
+        {mode === 'coached' && <LiveCoachTip playerElo={difficultyElo} plyCount={moveHistory.length} />}
         <div className="flex w-full max-w-[560px] items-center justify-center gap-3">
           {mode === 'coached' && <EvalBar evalCp={currentEvalCp} perspective={studentColor} />}
           <div className="relative w-full" dir="ltr">
@@ -394,9 +400,19 @@ function PlayScreen({ mode }) {
 
 function App() {
   const [mode, setMode] = useState('coached');
+  const [showOnboarding, setShowOnboarding] = useState(() => !hasOnboarded());
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 to-slate-900 px-3 py-4 sm:px-4 sm:py-6" dir="rtl">
+      {showOnboarding && (
+        <Onboarding
+          onClose={() => setShowOnboarding(false)}
+          onNavigate={(tab) => {
+            setMode(tab);
+            setShowOnboarding(false);
+          }}
+        />
+      )}
       <div className="mx-auto max-w-6xl">
         <header className="mb-4 text-center sm:mb-6">
           <h1 className="text-2xl font-extrabold text-slate-100 sm:text-3xl lg:text-4xl">מאמן השחמט שלי</h1>
@@ -435,6 +451,8 @@ function App() {
           <RatingTracker key="rating" />
         ) : mode === 'achievements' ? (
           <Achievements key="achievements" />
+        ) : mode === 'plan' ? (
+          <TrainingPlanScreen key="plan" onNavigate={setMode} />
         ) : (
           <PlayScreen key={mode} mode={mode} />
         )}

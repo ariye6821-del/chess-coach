@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { formatEval } from '../lib/stockfishEngine';
-import { MOVE_CLASSES } from '../lib/gameAnalysis';
-import { getCoachExplanation } from '../lib/coachApi';
+import { MOVE_CLASSES, movePhase } from '../lib/gameAnalysis';
+import { getCoachExplanation, getGameSummary } from '../lib/coachApi';
 import { CoachExplanationBox } from './CoachExplanationBox';
 import { useBoardTheme } from '../hooks/useBoardTheme';
 import { getPersonaForElo } from '../lib/coachPersona';
@@ -37,6 +37,46 @@ function isStudentMove(record, studentColor) {
   return !!record && record.mover === studentColor;
 }
 
+function CoachSummaryCard({ loading, gameSummary, playerElo }) {
+  const persona = getPersonaForElo(playerElo);
+  return (
+    <div className="mb-4 rounded-xl border border-slate-700 bg-slate-900/80 p-4">
+      <div className="mb-3 flex items-center gap-2 border-b border-slate-800 pb-3">
+        <span className="text-2xl">{persona.avatar}</span>
+        <h3 className="text-base font-bold text-slate-100">סיכום {persona.name}</h3>
+      </div>
+      {loading ? (
+        <div className="flex items-center gap-2 text-sm text-slate-400">
+          <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-500 border-t-transparent" />
+          המאמן מכין סיכום למשחק...
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {gameSummary?.overallSummary && <p className="text-sm text-slate-200">{gameSummary.overallSummary}</p>}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-lg bg-emerald-950/30 p-3">
+              <p className="mb-1 text-xs font-bold text-emerald-400">👍 נקודות טובות</p>
+              <ul className="list-inside list-disc space-y-1 text-sm text-slate-300">
+                {(gameSummary?.strengths || []).map((s, i) => (
+                  <li key={i}>{s}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-lg bg-amber-950/30 p-3">
+              <p className="mb-1 text-xs font-bold text-amber-400">📈 נקודות לשיפור</p>
+              <ul className="list-inside list-disc space-y-1 text-sm text-slate-300">
+                {(gameSummary?.improvements || []).map((s, i) => (
+                  <li key={i}>{s}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const HEADER_TEXT_BY_CLASS = {
   best: '⭐ מהלך מיטבי',
   good: '✅ מהלך טוב',
@@ -45,12 +85,42 @@ const HEADER_TEXT_BY_CLASS = {
   blunder: '🚨 כאן הייתה טעות חמורה',
 };
 
-export function GameReviewScreen({ records, summary, studentColor = 'w', onClose, title, playerElo = null }) {
+export function GameReviewScreen({ records, summary, studentColor = 'w', onClose, title, playerElo = null, resultLabel = null }) {
   const [theme] = useBoardTheme();
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [previewFen, setPreviewFen] = useState(null);
   const [explanations, setExplanations] = useState({});
+  const [gameSummary, setGameSummary] = useState(null);
+  const [loadingGameSummary, setLoadingGameSummary] = useState(true);
   const boardSectionRef = useRef(null);
+
+  useEffect(() => {
+    const studentMistakes = records
+      .filter((r) => r.mover === studentColor && (r.classification.key === 'mistake' || r.classification.key === 'blunder'))
+      .sort((a, b) => b.cpLoss - a.cpLoss)
+      .slice(0, 8)
+      .map((r) => ({
+        san: r.san,
+        classification: r.classification.key,
+        moveNumber: r.moveNumber,
+        phase: { opening: 'פתיחה', middlegame: 'אמצע משחק', endgame: 'סיום' }[movePhase(r.moveNumber)],
+        bestMoveSan: r.bestMoveSan,
+      }));
+
+    setLoadingGameSummary(true);
+    getGameSummary({
+      counts: summary.counts,
+      avgCpLoss: summary.avgCpLoss,
+      byPhase: summary.byPhase,
+      sampleMistakes: studentMistakes,
+      resultLabel,
+      playerElo,
+    }).then((result) => {
+      setGameSummary(result);
+      setLoadingGameSummary(false);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handlePreviewFen = (previewedFen) => {
     setPreviewFen(previewedFen);
@@ -121,6 +191,8 @@ export function GameReviewScreen({ records, summary, studentColor = 'w', onClose
       </div>
 
       {openingName && <p className="mb-2 text-sm text-slate-500">פתיחה: <span className="font-bold text-slate-400">{openingName}</span></p>}
+
+      <CoachSummaryCard loading={loadingGameSummary} gameSummary={gameSummary} playerElo={playerElo} />
 
       <div className="mb-4">
         <SummaryChips summary={summary} />
