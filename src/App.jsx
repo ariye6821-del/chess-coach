@@ -467,19 +467,19 @@ function App() {
       )}
       <div className="mx-auto max-w-6xl">
         <header className="mb-4 sm:mb-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 text-2xl shadow-lg shadow-sky-900/40 sm:h-12 sm:w-12">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 text-xl shadow-lg shadow-sky-900/40 sm:h-11 sm:w-11 sm:text-2xl lg:h-12 lg:w-12">
                 ♞
               </span>
-              <div>
-                <h1 className="text-xl font-extrabold leading-tight text-slate-100 sm:text-2xl lg:text-3xl">
+              <div className="min-w-0">
+                <h1 className="text-base font-extrabold leading-tight text-slate-100 sm:text-xl lg:text-2xl">
                   מאמן השחמט שלי
                 </h1>
-                <p className="text-xs text-slate-400 sm:text-sm">שפרו את דירוג האלו שלכם בזמן אמת</p>
+                <p className="hidden text-xs text-slate-400 sm:block sm:text-sm">שפרו את דירוג האלו שלכם בזמן אמת</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
               <SoundToggle />
               <BoardThemeSelector />
             </div>
@@ -487,9 +487,9 @@ function App() {
           <a
             href="/downloads/chess-coach.apk"
             download
-            className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-sm font-bold text-white shadow-md shadow-emerald-950/40 transition hover:from-emerald-500 hover:to-teal-500"
+            className="mt-3 inline-flex min-h-11 max-w-full items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-emerald-950/40 transition hover:from-emerald-500 hover:to-teal-500 sm:text-sm"
           >
-            📱 הורידו את האפליקציה לאנדרואיד (APK)
+            <span className="truncate">📱 הורידו את האפליקציה לאנדרואיד (APK)</span>
           </a>
         </header>
 

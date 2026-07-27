@@ -34,7 +34,7 @@ export function BoardThemeSelector() {
             background: `linear-gradient(135deg, ${theme.light} 50%, ${theme.dark} 50%)`,
           }}
         />
-        צבעי לוח
+        <span className="hidden sm:inline">צבעי לוח</span>
       </button>
 
       {open && (
