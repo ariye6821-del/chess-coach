@@ -211,6 +211,7 @@ function PlayScreen({ mode }) {
     clickToMove.clearSelection();
     setSelectedPly(null);
     setHintLevel(0);
+    setPreviewFen(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fen]);
 
@@ -369,8 +370,14 @@ function PlayScreen({ mode }) {
             status={status}
             mistake={mistake}
             gameOverMessage={gameOverMessage}
-            onRetry={retryAfterMistake}
-            onNewGame={() => resetGame(mode)}
+            onRetry={() => {
+              setPreviewFen(null);
+              retryAfterMistake();
+            }}
+            onNewGame={() => {
+              setPreviewFen(null);
+              resetGame(mode);
+            }}
             onPreviewFen={handlePreviewFen}
             playerElo={difficultyElo}
             hintLevel={hintLevel}
@@ -384,7 +391,10 @@ function PlayScreen({ mode }) {
             hasMoves={moveHistory.length > 0}
             canUndo={mode === 'friend' ? moveHistory.length > 0 : moveHistory.length >= 2}
             onReview={requestGameReview}
-            onNewGame={() => resetGame(mode)}
+            onNewGame={() => {
+              setPreviewFen(null);
+              resetGame(mode);
+            }}
             onUndo={undoLastMove}
             mode={mode}
           />

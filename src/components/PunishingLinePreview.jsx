@@ -37,6 +37,15 @@ export function PunishingLinePreview({ punishingLine, onPreviewFen }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [punishingLine]);
 
+  // This component only exists while a mistake is being explained (its parent
+  // stops rendering it as soon as the student retries/starts a new game/the
+  // game ends) - if a preview was left open when that happens, nothing else
+  // would ever clear the board override, permanently disabling the board.
+  useEffect(() => {
+    return () => onPreviewFen(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (!punishingLine.sans.length) return null;
 
   const close = () => {
