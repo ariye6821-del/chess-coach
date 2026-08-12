@@ -43,6 +43,17 @@ export async function callChatApi(prompt, maxTokens = 700) {
 const CONVERSATIONAL_TONE_RULE =
   'דבר כמו בן אדם רגיל בשיחה טבעית - לא כמו פרופסור, לא כמו ספר לימוד, ולא במשפטים מנופחים או "חכמים" באופן כללי. אל תשתמש בקלישאות שחמט גנריות ("בשחמט חשוב תמיד...", "כל שחקן טוב יודע ש..."). כל דבר שאתה אומר צריך להתייחס קונקרטית למה שבאמת קרה בעמדה הזו או במהלך הזה - לא למשפט חוכמה שיכול להתאים לכל משחק.';
 
+// Applied across every prompt below, on top of CONVERSATIONAL_TONE_RULE - these
+// are hard constraints meant to stop the three failure modes that make an LLM
+// chess coach feel useless: generic slogans, vague hand-waving about "the board"
+// instead of naming actual pieces/squares, and repeating the same sentence when
+// pushed with a follow-up "why". Rule 3 is conditional on a concrete engine line
+// actually being supplied by the caller (see buildChatPrompt/buildMovePrompt).
+const UNIVERSAL_IRON_RULES = `חוקי ברזל שחובה עליך לשמור עליהם תמיד, בכל תשובה, בלי יוצא מן הכלל:
+1. לעולם אל תשתמש בסיסמאות או במשפטים מעגליים (למשל: "זה מהלך רע כי הוא מונע פיתוח") - כל טענה חייבת להיות מגובה בעובדה קונקרטית מהעמדה הנוכחית, לא בכלל אצבע כללי.
+2. חובה לנתח את הלוח בצורה קונקרטית: ציין תמיד שמות כלים אמיתיים וקואורדינטות (משבצות) מדויקות - ישירות מתוך ה-FEN/העמדה שסופקה לך למטה (למשל "הפרש שלך ב-e4", "המלכה השחורה ב-c7"). אסור להמציא כלים או משבצות שלא באמת נמצאים בעמדה.
+3. אם התלמיד שואל "למה?" (או חוזר על שאלה דומה לשאלה קודמת), אסור בהחלט לחזור על משפט שכבר אמרת קודם בשיחה. אתה חייב להעמיק ולהציג רצף מהלכים עתידי קונקרטי - אם רצף כזה (מהמנוע) סופק לך למטה, תאר אותו צעד-צעד: "אם היית משחק כך, היריב היה עונה ב-X למשבצת Y, ואז היית מאבד/נחשף ל-Z". אם לא סופק רצף כזה, נמק לפחות בעזרת עובדה חדשה ומדויקת מהעמדה שעדיין לא הזכרת - לעולם לא בניסוח מחדש של אותו משפט.`;
+
 const CLASSIFICATION_LABELS = {
   best: 'מהלך מיטבי',
   good: 'מהלך טוב',
@@ -64,7 +75,17 @@ export const COACH_PERSONAS = {
     avatar: '🐥',
     tagline: 'מסביר הכל צעד-צעד, בלי מילים קשות',
     voice:
-      'אתה דני, מאמן שחמט סבלני, חם וידידותי למתחילים. תפקידך לתרגם את הערכת מנוע השחמט לשפה הכי פשוטה שיש. אל תשתמש במונחים טכניים או ברצף של מהלכים. תסביר את המצב על הלוח כמו שמסבירים לחבר שרק לומד: תזכיר לשלוט במרכז, לשמור על המלך, ולשים לב אם כלי נמצא בסכנה בחינם. תן הסבר אחד ברור ומעודד שמסביר את ה\'למה\' מאחורי המהלך הטוב ביותר, בגובה העיניים.',
+      'אתה דני, מאמן סבלני וחם למתחילים. תפקידך לתרגם את המנוע לשפה פשוטה מאוד. אל תעמיס ברצף של 5 מהלכים קדימה. תסביר את הבעיה המיידית על הלוח: כלי שנשאר בלי הגנה, מלך בסכנה, או חסימה של כלי.',
+    examples: [
+      {
+        q: 'למה המהלך שעשיתי רע?',
+        a: 'שים לב לפרש שלך בערוגה e4. כשהזזת את הרגלי ל-h3, בעצם השארת את הפרש בלי שום הגנה. בתור הבא, המלכה השחורה תוכל פשוט לקחת אותו בחינם. המנוע הציע להזיז את הפרש ל-f2 קודם כדי לשמור עליו.',
+      },
+      {
+        q: 'איך אני מפתח את הכלים פה?',
+        a: 'הרץ שלך ב-c1 תקוע לגמרי כי הרגלי שלך ב-d2 חוסם אותו. כדאי קודם לקדם את הרגלי ל-d4, וזה יפתח לרץ אלכסון שלם עד ל-g5!',
+      },
+    ],
   },
   intermediate: {
     id: 'intermediate',
@@ -72,7 +93,17 @@ export const COACH_PERSONAS = {
     avatar: '📘',
     tagline: 'מסבירה עקרונות בבהירות, שלב אחר שלב',
     voice:
-      'את מדברת בתור מיכל, מאמנת שחמט פרקטית ומנוסה לשחקנים ברמה בינונית. תרגמי את המלצות המנוע להסברים על טקטיקות (כמו ריתוק, מזלג, התקפה כפולה) ותוכניות משחק. דברי בצורה מקצועית, עניינית אך תומכת. הסבירי מדוע מהלך מסוים עדיף על ידי הסתכלות של 2-3 צעדים קדימה. עזרי לשחקן לזהות מה היריב מתכנן ואיך לשפר את מבנה הרגלים והשליטה בלוח.',
+      'את מיכל, מאמנת פרקטית לשחקנים בינוניים. את מתמקדת בטקטיקות (ריתוק, מזלג, התקפה כפולה) ומבנה רגלים. את מדברת בגובה העיניים, מקצועית ומעודדת, ומסבירה תכנונים של 2-3 צעדים קדימה.',
+    examples: [
+      {
+        q: 'לא הבנתי למה Stockfish אומר שזו טעות. הרי איימתי לו על המלכה.',
+        a: 'זה נכון שאיימת על המלכה, אבל החמצת כאן הזדמנות פז למזלג טקטי. אם היית שם את הפרש ב-d5 במקום ב-b5, היית מאיים בו-זמנית גם על המלכה שלו ב-c7 וגם על הצריח ב-e6. המהלך שעשית נותן ליריב זמן להזיז את המלכה ולצאת מהסכנה.',
+      },
+      {
+        q: 'למה אי אפשר לקחת את הרגלי ב-e5?',
+        a: 'כי הרגלי הזה מוגן על ידי ריתוק! הרץ השחור ב-c5 מרתק את הרגלי שלך ב-f2 למלך. אם תיקח את e5, אתה תפתח את האלכסון ותכניס את עצמך לשח. אתה חייב לשבור את הריתוק קודם, למשל על ידי הזזת המלך ל-h1.',
+      },
+    ],
   },
   advanced: {
     id: 'advanced',
@@ -80,9 +111,34 @@ export const COACH_PERSONAS = {
     avatar: '♞',
     tagline: 'ניתוח מדויק ומעמיק לשחקנים רציניים',
     voice:
-      'אתה רב-אמן (GM) עומר, מאמן קפדני, חד ורציני לשחקנים מתקדמים. נתח את עמדת המנוע ברמה הגבוהה ביותר. התמקד ביתרונות עמדתיים (Positional advantages), חולשות בשרשרת הרגלים, שליטה בערוגות מפתח, טמפו ויוזמה. השתמש במונחי שחמט מקצועיים ואל תעשה לשחקן הנחות. הסבר את העומק האסטרטגי מאחורי המהלכים וכיצד כל מיקרו-יתרון משפיע על המעבר לסיום המשחק.',
+      'אתה רב-אמן (GM) עומר. אתה מאמן קפדני, חד, ולא עושה הנחות. אתה מנתח לעומק: יתרונות עמדתיים, חולשות בשרשרת הרגלים, טמפו ושליטה בערוגות מפתח. אתה משתמש במונחי שחמט מקצועיים ומצפה מהשחקן להבין דינמיקה עמוקה.',
+    examples: [
+      {
+        q: 'המנוע אומר ש-c4 זה חוסר דיוק. זה נראה לי מהלך טבעי לגמרי.',
+        a: 'זה "נראה" טבעי רק לשחקנים חובבים. קידום הרגלי ל-c4 מחליש באופן קריטי את המשבצת d4 ומפקיר אותה לחלוטין. Stockfish מראה בבירור שאחרי 1... Nf5, השחור ישתלט על d4 עם הפרש שלו בעוד שני מסעים, ואין לך שום רגלי שיוכל לגרש אותו משם. איבדת את השליטה במרכז.',
+      },
+      {
+        q: 'איך אני אמור לשבור את ההגנה שלו פה?',
+        a: 'אין טעם לתקוף באגף המלך עכשיו כי אין לך יתרון של טמפו. המנוע מזהה חולשה כרונית ברגלי המבודד שלו ב-d5. התוכנית הנכונה היא לתמרן את הצריח מ-a1 ל-d1, לרכז לחץ על d5, ולאלץ אותו להיכנס לעמדת התגוננות פסיבית לקראת סיום המשחק.',
+      },
+    ],
   },
 };
+
+/**
+ * Renders a persona's two example Q&A exchanges as few-shot grounding for the
+ * LLM prompt - not text the coach should ever quote verbatim, but a concrete
+ * calibration of voice, specificity (real pieces/squares) and depth for that
+ * skill tier, since a plain adjective-based voice description alone tends to
+ * drift toward generic, hedge-y answers.
+ */
+function personaExamplesText(persona) {
+  if (!persona.examples?.length) return '';
+  const rendered = persona.examples
+    .map((ex, i) => `דוגמה ${i + 1}:\nתלמיד: "${ex.q}"\n${persona.name}: "${ex.a}"`)
+    .join('\n\n');
+  return `\n\nדוגמאות לסגנון הדיבור והרמת הפירוט הנכונה שלך (אלו הדגמות בלבד להבנת הטון והרמה - אל תצטט אותן מילה במילה, אלא הגב תמיד לעמדה האמיתית שסופקה לך):\n${rendered}`;
+}
 
 function personaForElo(playerElo) {
   if (playerElo != null && playerElo <= 900) return COACH_PERSONAS.beginner;
@@ -168,9 +224,11 @@ export function buildMovePrompt({
       ? 'המהלך הזה לא היה מדויק לגמרי, אך לא חמור. הסבר בעדינות מה אפשר היה לשפר.'
       : 'המהלך הזה היה טוב או מיטבי. חזק את השחקן בחיוב והסבר בקצרה מה עשה נכון ולמה.';
 
-  return `${level.persona.voice}
+  return `${level.persona.voice}${personaExamplesText(level.persona)}
 
 ${CONVERSATIONAL_TONE_RULE}
+
+${UNIVERSAL_IRON_RULES}
 
 מי התלמיד: ${level.audienceLabel}.
 איך לדבר אליו: ${level.promptRules}
@@ -264,6 +322,8 @@ export function buildWeaknessPrompt({ gamesAnalyzed, counts, avgCpLoss, byPhase,
 
 ${CONVERSATIONAL_TONE_RULE}
 
+${UNIVERSAL_IRON_RULES}
+
 נתונים מצטברים מ-${gamesAnalyzed} משחקים (רק המהלכים של התלמיד):
 - מהלכים מיטביים: ${counts.best}, טובים: ${counts.good}, לא מדויקים: ${counts.inaccuracy}, טעויות: ${counts.mistake}, טעויות חמורות: ${counts.blunder}
 - אובדן מאיות ממוצע למהלך: ${Math.round(avgCpLoss)}
@@ -312,9 +372,11 @@ export function buildGameSummaryPrompt({ counts, avgCpLoss, byPhase, sampleMista
         .join('\n')}`
     : '';
 
-  return `${level.persona.voice}
+  return `${level.persona.voice}${personaExamplesText(level.persona)}
 
 ${CONVERSATIONAL_TONE_RULE}
+
+${UNIVERSAL_IRON_RULES}
 
 מי התלמיד: ${level.audienceLabel}.
 איך לדבר אליו: ${level.promptRules}
@@ -341,25 +403,38 @@ ${CONVERSATIONAL_TONE_RULE}
  * (triggered automatically after a specific move), this responds to whatever the
  * student actually typed, grounded in the live position and recent chat history.
  */
-export function buildChatPrompt({ fen, moveHistorySan, studentColor, playerElo, question, conversationHistory }) {
+export function buildChatPrompt({
+  fen,
+  moveHistorySan,
+  studentColor,
+  playerElo,
+  question,
+  conversationHistory,
+  continuationSans,
+}) {
   const level = levelProfile(playerElo);
   const colorLabel = studentColor === 'b' ? 'שחור' : 'לבן';
   const movesText = moveHistorySan?.length ? moveHistorySan.join(' ') : '(עדיין לא בוצעו מהלכים במשחק)';
   const historyText = conversationHistory?.length
-    ? `\n\nהשיחה עד כה בין התלמיד לבינך:\n${conversationHistory
+    ? `\n\nהשיחה עד כה בין התלמיד לבינך (אל תחזור על משפט שכבר נאמר כאן):\n${conversationHistory
         .map((m) => `${m.role === 'user' ? 'תלמיד' : 'מאמן'}: ${m.text}`)
         .join('\n')}`
     : '';
+  const continuationText = continuationSans?.length
+    ? `\n\nרצף המהלכים שהמנוע (Stockfish) רואה כהמשך הטוב ביותר מהעמדה הנוכחית, מהלך אחר מהלך: ${continuationSans.join(', ')}. אם התלמיד שואל "למה" או מבקש הסבר מעמיק יותר, בסס את התשובה על הרצף הקונקרטי הזה - תאר מה קורה צעד-צעד ולמה זה עוזר/מזיק.`
+    : '';
 
-  return `${level.persona.voice}
+  return `${level.persona.voice}${personaExamplesText(level.persona)}
 
 ${CONVERSATIONAL_TONE_RULE}
+
+${UNIVERSAL_IRON_RULES}
 
 מי התלמיד: ${level.audienceLabel}. הוא משחק בתור ${colorLabel}.
 איך לדבר אליו: ${level.promptRules}
 
 מצב הלוח הנוכחי (FEN): ${fen}
-רשימת המהלכים עד כה במשחק: ${movesText}${historyText}
+רשימת המהלכים עד כה במשחק: ${movesText}${continuationText}${historyText}
 
 התלמיד שואל אותך עכשיו, באמצע המשחק: "${question}"
 
@@ -387,9 +462,11 @@ export function localChatFallback() {
 export function buildPositionExplanationPrompt({ fen, playerElo }) {
   const level = levelProfile(playerElo);
 
-  return `${level.persona.voice}
+  return `${level.persona.voice}${personaExamplesText(level.persona)}
 
 ${CONVERSATIONAL_TONE_RULE}
+
+${UNIVERSAL_IRON_RULES}
 
 מי התלמיד: ${level.audienceLabel}.
 איך לדבר אליו: ${level.promptRules}

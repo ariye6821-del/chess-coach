@@ -1,13 +1,34 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getCoachChatReply } from '../lib/coachApi';
+import { StockfishEngine } from '../lib/stockfishEngine';
+import { buildContinuation } from '../lib/gameAnalysis';
 
 const MAX_HISTORY_SENT = 6;
+const CHAT_ANALYSIS_DEPTH = 14;
+const CHAT_CONTINUATION_PLIES = 6;
 
 export function CoachChat({ fen, moveHistorySan, studentColor, playerElo, persona }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const engineRef = useRef(null);
+
+  // The engine is only spun up once the student actually opens the chat panel
+  // (not on every mount of CoachPanel), since a coached game already runs two
+  // Stockfish workers of its own (see useChessGame.js) - this is a third,
+  // dedicated to grounding "why" answers in a real engine line instead of
+  // letting the LLM invent one.
+  useEffect(() => {
+    if (!open || engineRef.current) return;
+    const engine = new StockfishEngine();
+    engineRef.current = engine;
+    engine.init();
+    return () => {
+      engine.terminate();
+      engineRef.current = null;
+    };
+  }, [open]);
 
   const sendQuestion = async () => {
     const question = input.trim();
@@ -17,6 +38,20 @@ export function CoachChat({ fen, moveHistorySan, studentColor, playerElo, person
     setMessages(nextMessages);
     setLoading(true);
     try {
+      let continuationSans = [];
+      try {
+        const engine = engineRef.current;
+        if (engine) {
+          await engine.init();
+          const analysis = await engine.analyze(fen, { depth: CHAT_ANALYSIS_DEPTH });
+          if (analysis?.pvUci?.length) {
+            continuationSans = buildContinuation(fen, analysis.pvUci, CHAT_CONTINUATION_PLIES).sans;
+          }
+        }
+      } catch {
+        continuationSans = [];
+      }
+
       const result = await getCoachChatReply({
         fen,
         moveHistorySan,
@@ -24,6 +59,7 @@ export function CoachChat({ fen, moveHistorySan, studentColor, playerElo, person
         playerElo,
         question,
         conversationHistory: nextMessages.slice(-MAX_HISTORY_SENT),
+        continuationSans,
       });
       setMessages((prev) => [...prev, { role: 'coach', text: result.reply }]);
     } finally {

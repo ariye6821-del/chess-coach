@@ -23,6 +23,7 @@ export const handler = async (event) => {
     playerElo: body.playerElo ?? null,
     question: body.question ?? '',
     conversationHistory: body.conversationHistory ?? [],
+    continuationSans: body.continuationSans ?? [],
   };
 
   if (!params.question.trim()) {
