@@ -10,6 +10,7 @@ import { useClickToMove } from '../hooks/useClickToMove';
 import { useBoardTheme } from '../hooks/useBoardTheme';
 import { getPersonaForElo } from '../lib/coachPersona';
 import { TACTIC_LABELS } from '../lib/tacticTags';
+import { playMoveSound, playGameOverSound, playMistakeSound } from '../lib/sounds';
 
 const SOURCE_LABELS = {
   coached: 'מהמשחק עם המאמן',
@@ -127,6 +128,7 @@ export function PuzzleTrainer() {
       setResult('correct');
       markPuzzleSolved(puzzle.id);
       setDisplayFen(chess.fen());
+      playGameOverSound();
       return true;
     }
 
@@ -134,6 +136,7 @@ export function PuzzleTrainer() {
     setResult('wrong');
     chess.undo();
     setDisplayFen(chess.fen());
+    playMistakeSound();
     return false;
   };
 
@@ -143,6 +146,7 @@ export function PuzzleTrainer() {
     const chess = chessRef.current;
     chess.move(puzzle.solutionSan);
     setDisplayFen(chess.fen());
+    playMoveSound();
     setRevealed(true);
   };
 

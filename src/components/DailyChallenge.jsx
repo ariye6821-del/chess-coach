@@ -4,7 +4,7 @@ import { Chessboard } from 'react-chessboard';
 import { useClickToMove } from '../hooks/useClickToMove';
 import { useBoardTheme } from '../hooks/useBoardTheme';
 import { getDailyPuzzle, getStreak, hasSolvedToday, recordDailySolve } from '../lib/dailyChallenge';
-import { playGameOverSound, playMistakeSound } from '../lib/sounds';
+import { playMoveSound, playGameOverSound, playMistakeSound } from '../lib/sounds';
 
 export function DailyChallenge() {
   const puzzle = useRef(getDailyPuzzle()).current;
@@ -48,6 +48,7 @@ export function DailyChallenge() {
   const showSolution = () => {
     chessRef.current.move(puzzle.solutionSan);
     setDisplayFen(chessRef.current.fen());
+    playMoveSound();
     setRevealed(true);
   };
 

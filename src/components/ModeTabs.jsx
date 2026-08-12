@@ -39,7 +39,7 @@ export function ModeTabs({ active, onChange }) {
           <p className="shrink-0 text-[11px] font-bold uppercase tracking-wider text-slate-500 sm:w-20 sm:text-left">
             {group.label}
           </p>
-          <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:pb-0">
+          <div className="flex flex-wrap gap-1.5">
             {group.tabs.map((tab) => (
               <button
                 key={tab.key}

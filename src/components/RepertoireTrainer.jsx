@@ -5,9 +5,16 @@ import { useClickToMove } from '../hooks/useClickToMove';
 import { useBoardTheme } from '../hooks/useBoardTheme';
 import { REPERTOIRE_LINES } from '../lib/repertoire';
 import { getLineProgress, isLineDue, markLineResult } from '../lib/repertoireProgress';
+import { playMoveSound, playCaptureSound, playCheckSound, playMistakeSound, playGameOverSound } from '../lib/sounds';
 
 function isStudentTurn(idx, studentColor) {
   return (idx % 2 === 0 ? 'w' : 'b') === studentColor;
+}
+
+function playMoveResultSound(chess, moveResult) {
+  if (chess.inCheck()) playCheckSound();
+  else if (moveResult?.captured) playCaptureSound();
+  else playMoveSound();
 }
 
 export function RepertoireTrainer() {
@@ -73,6 +80,7 @@ function LineDrill({ line, onExit }) {
   const [feedback, setFeedback] = useState(null);
   const [done, setDone] = useState(false);
   const [revealedMove, setRevealedMove] = useState(null);
+  const [lastExplained, setLastExplained] = useState(null);
 
   const studentTurnNow = isStudentTurn(stepIndex, line.studentColor);
 
@@ -82,13 +90,17 @@ function LineDrill({ line, onExit }) {
     if (done) return;
     if (stepIndex >= line.moves.length) {
       setDone(true);
+      playGameOverSound();
       markLineResult(line.id, !hadMistake);
       return;
     }
     if (!isStudentTurn(stepIndex, line.studentColor)) {
       const t = setTimeout(() => {
-        chessRef.current.move(line.moves[stepIndex]);
+        const entry = line.moves[stepIndex];
+        const moveResult = chessRef.current.move(entry.san);
+        playMoveResultSound(chessRef.current, moveResult);
         setFen(chessRef.current.fen());
+        setLastExplained({ san: entry.san, explain: entry.explain, byStudent: false });
         setStepIndex((i) => i + 1);
       }, 500);
       return () => clearTimeout(t);
@@ -107,9 +119,12 @@ function LineDrill({ line, onExit }) {
     }
     if (!moveResult) return false;
 
-    if (moveResult.san === line.moves[stepIndex]) {
+    const entry = line.moves[stepIndex];
+    if (moveResult.san === entry.san) {
       setFeedback(null);
       setFen(chess.fen());
+      playMoveResultSound(chess, moveResult);
+      setLastExplained({ san: entry.san, explain: entry.explain, byStudent: true });
       setStepIndex((i) => i + 1);
       return true;
     }
@@ -118,6 +133,7 @@ function LineDrill({ line, onExit }) {
     setFen(chess.fen());
     setHadMistake(true);
     setFeedback('wrong');
+    playMistakeSound();
     return false;
   };
 
@@ -128,8 +144,11 @@ function LineDrill({ line, onExit }) {
   };
 
   const continueAfterReveal = () => {
-    chessRef.current.move(line.moves[stepIndex]);
+    const entry = line.moves[stepIndex];
+    const moveResult = chessRef.current.move(entry.san);
+    playMoveResultSound(chessRef.current, moveResult);
     setFen(chessRef.current.fen());
+    setLastExplained({ san: entry.san, explain: entry.explain, byStudent: true });
     setStepIndex((i) => i + 1);
     setRevealedMove(null);
   };
@@ -142,6 +161,7 @@ function LineDrill({ line, onExit }) {
     setFeedback(null);
     setDone(false);
     setRevealedMove(null);
+    setLastExplained(null);
   };
 
   const boardDisabled = done || !studentTurnNow || !!revealedMove;
@@ -195,14 +215,26 @@ function LineDrill({ line, onExit }) {
       {revealedMove && (
         <div className="w-full space-y-2 rounded-lg bg-slate-800 p-3 text-center text-sm text-slate-300">
           <p>
-            המהלך הנכון: <span className="font-mono font-bold text-sky-400">{revealedMove}</span>
+            המהלך הנכון: <span className="font-mono font-bold text-sky-400">{revealedMove.san}</span>
           </p>
+          {revealedMove.explain && (
+            <p className="text-right text-xs leading-relaxed text-slate-400">{revealedMove.explain}</p>
+          )}
           <button
             onClick={continueAfterReveal}
             className="w-full rounded-lg bg-gradient-to-r from-sky-500 to-indigo-500 px-4 py-2 font-bold text-white transition hover:from-sky-400 hover:to-indigo-400"
           >
             המשיכו
           </button>
+        </div>
+      )}
+
+      {!revealedMove && lastExplained && (
+        <div className="w-full rounded-lg border border-sky-900/50 bg-sky-950/30 p-3 text-right text-sm text-slate-300">
+          <p className="mb-1 text-xs font-bold text-sky-400">
+            🧑‍🏫 המאמן מסביר על {lastExplained.san} {lastExplained.byStudent ? '(המהלך שלכם)' : '(מהלך היריב)'}:
+          </p>
+          <p className="leading-relaxed">{lastExplained.explain}</p>
         </div>
       )}
 

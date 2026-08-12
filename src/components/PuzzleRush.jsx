@@ -5,6 +5,7 @@ import { getAllPuzzles } from '../lib/puzzleBank';
 import { getBestScore, saveBestScore, shuffled } from '../lib/puzzleRush';
 import { useClickToMove } from '../hooks/useClickToMove';
 import { useBoardTheme } from '../hooks/useBoardTheme';
+import { playMoveSound, playMistakeSound, playGameOverSound } from '../lib/sounds';
 
 const DURATION_SEC = 180;
 const MAX_MISSES = 3;
@@ -60,6 +61,7 @@ export function PuzzleRush() {
 
   const finish = () => {
     setPhase('done');
+    playGameOverSound();
     setBestScore((prev) => {
       saveBestScore(score);
       return Math.max(prev, score);
@@ -89,6 +91,7 @@ export function PuzzleRush() {
 
     if (moveResult.san === puzzle.solutionSan) {
       showFlash('correct');
+      playMoveSound();
       setScore((s) => s + 1);
       advance();
       return true;
@@ -97,6 +100,7 @@ export function PuzzleRush() {
     chess.undo();
     setDisplayFen(chess.fen());
     showFlash('wrong');
+    playMistakeSound();
     setMisses((m) => {
       const next = m + 1;
       if (next >= MAX_MISSES) {
