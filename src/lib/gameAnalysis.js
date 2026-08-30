@@ -107,7 +107,9 @@ export async function analyzeGameFromMoves(engine, sanMoves, { startFen, depth =
     const fenBefore = chess.fen();
     const mover = chess.turn();
     const evalBeforeWhite = current.evalCp;
+    const mateBefore = current.mate;
     const bestMoveSan = sanForUci(fenBefore, current.bestMoveUci);
+    const opponentLastMoveSan = i > 0 ? sanMoves[i - 1] : null;
 
     let moveResult;
     try {
@@ -120,6 +122,7 @@ export async function analyzeGameFromMoves(engine, sanMoves, { startFen, depth =
     const fenAfter = chess.fen();
     const after = await engine.analyze(fenAfter, { depth });
     const evalAfterWhite = after.evalCp;
+    const mateAfter = after.mate;
 
     const sign = mover === 'w' ? 1 : -1;
     const cpLoss = Math.max(0, (evalBeforeWhite - evalAfterWhite) * sign);
@@ -131,8 +134,11 @@ export async function analyzeGameFromMoves(engine, sanMoves, { startFen, depth =
       san: moveResult.san,
       fenBefore,
       fenAfter,
+      opponentLastMoveSan,
       evalBeforeWhite,
       evalAfterWhite,
+      mateBefore,
+      mateAfter,
       cpLoss,
       classification: classifyMove(cpLoss),
       bestMoveSan: bestMoveSan && bestMoveSan !== moveResult.san ? bestMoveSan : null,

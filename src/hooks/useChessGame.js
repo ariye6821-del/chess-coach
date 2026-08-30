@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Chess } from 'chess.js';
-import { StockfishEngine } from '../lib/stockfishEngine';
+import { StockfishEngine, formatEval } from '../lib/stockfishEngine';
 import { getCoachExplanation } from '../lib/coachApi';
 import { isWeakTier, pickWeightedMove, randomMoveProbability } from '../lib/difficulty';
 import {
@@ -24,11 +24,6 @@ const COMPUTER_MOVE_DEPTH = 12;
 const WEAK_MOVE_DEPTH = 6;
 const REVIEW_DEPTH = 11;
 const CONTINUATION_PLIES = 6;
-
-function formatCp(cp) {
-  const pawns = (cp / 100).toFixed(2);
-  return cp >= 0 ? `+${pawns}` : pawns;
-}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -143,7 +138,7 @@ export function useChessGame(initialMode = 'coached', initialOptions = {}) {
       opponentEngine.setStrength(difficultyRef.current);
       syncFromChess();
       const baseline = await analysisEngine.analyze(chessRef.current.fen(), { depth: PLAYER_ANALYSIS_DEPTH });
-      baselineRef.current = { evalCp: baseline.evalCp, bestMoveUci: baseline.bestMoveUci };
+      baselineRef.current = { evalCp: baseline.evalCp, mate: baseline.mate, bestMoveUci: baseline.bestMoveUci };
       setCurrentEvalCp(baseline.evalCp);
       setBestMoveUci(baseline.bestMoveUci);
       setStatus('player-turn');
@@ -254,10 +249,14 @@ export function useChessGame(initialMode = 'coached', initialOptions = {}) {
   const requestExplanation = useCallback(async (mistakeData) => {
     const explanation = await getCoachExplanation({
       fenBefore: mistakeData.fenBefore,
+      fenAfter: mistakeData.fenAfter,
       badMoveSan: mistakeData.badMoveSan,
       bestMoveSan: mistakeData.bestMoveSan,
-      evalBeforeStr: formatCp(mistakeData.evalBeforeCp),
-      evalAfterStr: formatCp(mistakeData.evalAfterCp),
+      opponentLastMoveSan: mistakeData.opponentLastMoveSan,
+      evalBeforeStr: formatEval(mistakeData.evalBeforeCp, mistakeData.mateBefore),
+      evalAfterStr: formatEval(mistakeData.evalAfterCp, mistakeData.mateAfter),
+      mateBefore: mistakeData.mateBefore,
+      mateAfter: mistakeData.mateAfter,
       moveNumber: mistakeData.moveNumber,
       continuationSans: mistakeData.punishingLine?.sans ?? [],
       moverColor: studentColorRef.current,
@@ -296,7 +295,7 @@ export function useChessGame(initialMode = 'coached', initialOptions = {}) {
 
       if (modeRef.current === 'coached') {
         const nextBaseline = await analysisEngineRef.current.analyze(chess.fen(), { depth: PLAYER_ANALYSIS_DEPTH });
-        baselineRef.current = { evalCp: nextBaseline.evalCp, bestMoveUci: nextBaseline.bestMoveUci };
+        baselineRef.current = { evalCp: nextBaseline.evalCp, mate: nextBaseline.mate, bestMoveUci: nextBaseline.bestMoveUci };
         setCurrentEvalCp(nextBaseline.evalCp);
         setBestMoveUci(nextBaseline.bestMoveUci);
       }
@@ -311,9 +310,16 @@ export function useChessGame(initialMode = 'coached', initialOptions = {}) {
       (async () => {
         const analysisEngine = analysisEngineRef.current;
         const fenAfter = chess.fen();
+        // The student's move is already applied to `chess` at this point, so the
+        // entry right before it in the history is the opponent's last reply -
+        // useful context for the coach beyond what fenBefore alone conveys.
+        const historyBeforeUndo = chess.history();
+        const opponentLastMoveSan = historyBeforeUndo.length >= 2 ? historyBeforeUndo[historyBeforeUndo.length - 2] : null;
         const afterAnalysis = await analysisEngine.analyze(fenAfter, { depth: PLAYER_ANALYSIS_DEPTH });
         const evalBeforeCp = baselineRef.current.evalCp;
         const evalAfterCp = afterAnalysis.evalCp;
+        const mateBefore = baselineRef.current.mate;
+        const mateAfter = afterAnalysis.mate;
         // evalCp is always in White's perspective, so a move's cost to the mover
         // needs the sign flipped when the student is playing Black.
         const sign = studentColorRef.current === 'w' ? 1 : -1;
@@ -326,10 +332,14 @@ export function useChessGame(initialMode = 'coached', initialOptions = {}) {
           const punishingLine = buildContinuation(fenAfter, afterAnalysis.pvUci, CONTINUATION_PLIES);
           const mistakeData = {
             fenBefore: fenBeforeMove,
+            fenAfter,
             badMoveSan,
             bestMoveSan: bestMoveSan || '(לא זמין)',
+            opponentLastMoveSan,
             evalBeforeCp,
             evalAfterCp,
+            mateBefore,
+            mateAfter,
             moveNumber,
             punishingLine,
             classification: classifyMove(delta).key,

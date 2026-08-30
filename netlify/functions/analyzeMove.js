@@ -20,10 +20,14 @@ export const handler = async (event) => {
 
   const params = {
     fenBefore: body.fenBefore,
+    fenAfter: body.fenAfter,
     san: body.badMoveSan ?? body.san,
     bestMoveSan: body.bestMoveSan,
+    opponentLastMoveSan: body.opponentLastMoveSan ?? null,
     evalBeforeStr: body.evalBeforeStr,
     evalAfterStr: body.evalAfterStr,
+    mateBefore: body.mateBefore ?? null,
+    mateAfter: body.mateAfter ?? null,
     moveNumber: body.moveNumber,
     continuationSans: body.continuationSans,
     moverColor: body.moverColor,

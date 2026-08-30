@@ -141,10 +141,14 @@ export function GameReviewScreen({ records, summary, studentColor = 'w', onClose
     setExplanations((prev) => ({ ...prev, [selectedIndex]: { loadingExplanation: true, explanation: null } }));
     getCoachExplanation({
       fenBefore: selected.fenBefore,
+      fenAfter: selected.fenAfter,
       badMoveSan: selected.san,
       bestMoveSan: selected.bestMoveSan,
-      evalBeforeStr: formatEval(selected.evalBeforeWhite),
-      evalAfterStr: formatEval(selected.evalAfterWhite),
+      opponentLastMoveSan: selected.opponentLastMoveSan,
+      evalBeforeStr: formatEval(selected.evalBeforeWhite, selected.mateBefore),
+      evalAfterStr: formatEval(selected.evalAfterWhite, selected.mateAfter),
+      mateBefore: selected.mateBefore,
+      mateAfter: selected.mateAfter,
       moveNumber: selected.moveNumber,
       continuationSans: selected.punishingLine?.sans ?? [],
       moverColor: selected.mover,
